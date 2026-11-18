@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { requireAdmin } from "@/lib/permissions";
 import { getCategories, getVenues } from "@/lib/queries";
+import { getHouses } from "@/lib/houses";
 import { todayKey } from "@/lib/dates";
 import { eventToFormValues } from "@/lib/event-helpers";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -20,7 +21,7 @@ export default async function AdminEditEventPage({ params }: { params: Promise<{
   const { locale, t } = await getI18n();
   const event = await db.event.findUnique({ where: { id } });
   if (!event) notFound();
-  const [categories, venues] = await Promise.all([getCategories(locale), getVenues(locale)]);
+  const [categories, venues, houses] = await Promise.all([getCategories(locale), getVenues(locale), getHouses(locale)]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -29,7 +30,7 @@ export default async function AdminEditEventPage({ params }: { params: Promise<{
         <StatusBadge status={event.status} />
       </div>
       <div className="mt-6">
-        <EventForm mode="admin" eventId={event.id} status={event.status} initial={eventToFormValues(event)} categories={categories} venues={venues} todayKey={todayKey()} />
+        <EventForm mode="admin" eventId={event.id} status={event.status} initial={eventToFormValues(event)} categories={categories} houses={houses} venues={venues} todayKey={todayKey()} />
       </div>
     </div>
   );

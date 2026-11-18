@@ -29,7 +29,7 @@ export function LanguageSwitch() {
           onClick={() => choose(l)}
           className={cn(
             "min-h-11 min-w-11 rounded-pill px-3 text-sm font-bold tracking-wide transition-colors",
-            locale === l ? "bg-accent text-white" : "text-ink hover:bg-accent-soft",
+            locale === l ? "bg-brand text-ink" : "text-ink hover:bg-accent-soft",
           )}
         >
           {l.toUpperCase()}

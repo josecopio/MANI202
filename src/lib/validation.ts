@@ -11,6 +11,9 @@ import { contrastRatio, isHexColor, MIN_TEXT_CONTRAST } from "./contrast";
 export const TITLE_MAX = 120;
 export const DESCRIPTION_MAX = 400;
 export const MAX_RECURRENCE_DAYS = 366;
+export const NOTE_MAX = 200;
+/** Form value of "Outside the houses": the event belongs to no house. */
+export const HOUSE_NONE = "none";
 
 /** Error keys are translated in the UI (messages.errors). */
 export type ErrorKey =
@@ -36,6 +39,10 @@ export type ErrorKey =
   | "colour_invalid"
   | "contrast_low"
   | "reason_short"
+  | "house_required"
+  | "house_only_needs_house"
+  | "note_long"
+  | "venue_house_mismatch"
   | "invalid";
 
 export type EventField =
@@ -45,9 +52,12 @@ export type EventField =
   | "date"
   | "startTime"
   | "endTime"
+  | "houseId"
   | "venueId"
   | "customLocation"
   | "audience"
+  | "spaceImpact"
+  | "restrictionNote"
   | "organiserName"
   | "contactEmail"
   | "registrationUrl"
@@ -62,9 +72,13 @@ export type EventFormValues = {
   date: string; // YYYY-MM-DD (Europe/Paris)
   startTime: string; // HH:mm
   endTime: string; // HH:mm
+  /** House id, or HOUSE_NONE for an event outside the houses, or "" while unchosen. */
+  houseId: string;
   venueId: string;
   customLocation: string;
-  audience: "RESIDENTS_ONLY" | "PUBLIC";
+  audience: "RESIDENTS_ONLY" | "PUBLIC" | "HOUSE_ONLY";
+  spaceImpact: "NONE" | "LIMITED" | "CLOSED";
+  restrictionNote: string;
   organiserName: string;
   contactEmail: string;
   registrationUrl: string;
@@ -79,9 +93,12 @@ export type EventData = {
   description: string;
   startAt: Date;
   endAt: Date;
+  houseId: string | null;
   venueId: string;
   customLocation: string | null;
-  audience: "RESIDENTS_ONLY" | "PUBLIC";
+  audience: "RESIDENTS_ONLY" | "PUBLIC" | "HOUSE_ONLY";
+  spaceImpact: "NONE" | "LIMITED" | "CLOSED";
+  restrictionNote: string | null;
   organiserName: string;
   contactEmail: string;
   registrationUrl: string | null;
@@ -101,6 +118,8 @@ export type ValidationOptions = {
   allowPast?: boolean;
   /** Venues flagged "Other" require a custom location. */
   otherVenueIds?: string[];
+  /** Maps each venue id to the house it belongs to (null = generic space, usable in any house). */
+  venueHouse?: Record<string, string | null>;
 };
 
 const s = (max: number) => z.string().max(max, "invalid").default("");
@@ -112,9 +131,12 @@ const eventShape = z.object({
   date: s(20),
   startTime: s(10),
   endTime: s(10),
+  houseId: s(100),
   venueId: s(100),
   customLocation: s(500),
-  audience: z.enum(["RESIDENTS_ONLY", "PUBLIC"], "invalid"),
+  audience: z.enum(["RESIDENTS_ONLY", "PUBLIC", "HOUSE_ONLY"], "invalid"),
+  spaceImpact: z.enum(["NONE", "LIMITED", "CLOSED"], "invalid").default("NONE"),
+  restrictionNote: s(2000),
   organiserName: s(300),
   contactEmail: s(320),
   registrationUrl: s(1000),
@@ -169,6 +191,7 @@ export function validateEvent(input: unknown, options: ValidationOptions): Event
     title: raw.title.trim(),
     description: raw.description.trim(),
     customLocation: raw.customLocation.trim(),
+    restrictionNote: raw.restrictionNote.trim(),
     organiserName: raw.organiserName.trim(),
     contactEmail: raw.contactEmail.trim(),
     registrationUrl: raw.registrationUrl.trim(),
@@ -211,7 +234,15 @@ export function validateEvent(input: unknown, options: ValidationOptions): Event
     fail(v.date < dayKeyOf(now) ? "date" : "startTime", "date_past");
   }
 
+  if (!v.houseId) fail("houseId", "house_required");
   if (!v.venueId) fail("venueId", "required");
+  else if (v.houseId && options.venueHouse && v.venueId in options.venueHouse) {
+    // A space belongs to one house, or to none (generic "Other").
+    const owner = options.venueHouse[v.venueId];
+    if (owner && owner !== v.houseId) fail("venueId", "venue_house_mismatch");
+  }
+  if (v.audience === "HOUSE_ONLY" && v.houseId === HOUSE_NONE) fail("audience", "house_only_needs_house");
+  if (v.restrictionNote.length > NOTE_MAX) fail("restrictionNote", "note_long");
   if (v.customLocation.length > 120) fail("customLocation", "custom_location_long");
   else if (submit && v.venueId && options.otherVenueIds?.includes(v.venueId) && !v.customLocation) {
     fail("customLocation", "custom_location_required");
@@ -256,9 +287,12 @@ export function validateEvent(input: unknown, options: ValidationOptions): Event
       description: v.description,
       startAt,
       endAt,
+      houseId: v.houseId === HOUSE_NONE ? null : v.houseId,
       venueId: v.venueId,
       customLocation: v.customLocation || null,
       audience: v.audience,
+      spaceImpact: v.spaceImpact,
+      restrictionNote: v.restrictionNote || null,
       organiserName: v.organiserName,
       contactEmail: v.contactEmail,
       registrationUrl: v.registrationUrl || null,
@@ -293,9 +327,17 @@ export const categorySchema = z
   });
 
 export const venueSchema = z.object({
+  houseId: z.string().max(100).default(""),
   nameFr: z.string().trim().min(1, "required").max(80, "invalid"),
   nameEn: z.string().trim().min(1, "required").max(80, "invalid"),
   isOther: z.boolean().default(false),
+  sortOrder: z.coerce.number().int().min(0).max(999).default(0),
+});
+
+export const houseSchema = z.object({
+  nameFr: z.string().trim().min(1, "required").max(80, "invalid"),
+  nameEn: z.string().trim().min(1, "required").max(80, "invalid"),
+  isResidence: z.boolean().default(true),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 });
 

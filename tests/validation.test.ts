@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateEvent, type EventFormValues } from "@/lib/validation";
+import { HOUSE_NONE, validateEvent, type EventFormValues } from "@/lib/validation";
 import { contrastRatio } from "@/lib/contrast";
 import { categorySchema } from "@/lib/validation";
 
@@ -13,9 +13,12 @@ const valid: EventFormValues = {
   date: "2026-11-25",
   startTime: "19:00",
   endTime: "21:30",
+  houseId: "house1",
   venueId: "venue1",
   customLocation: "",
   audience: "RESIDENTS_ONLY",
+  spaceImpact: "NONE",
+  restrictionNote: "",
   organiserName: "Maison du Japon",
   contactEmail: "events@example.org",
   registrationUrl: "",
@@ -136,6 +139,41 @@ describe("validateEvent (draft)", () => {
     const r = draft({ contactEmail: "nope", description: "y".repeat(500) });
     expect(!r.ok && r.errors.contactEmail).toBe("email_invalid");
     expect(!r.ok && r.errors.description).toBe("description_long");
+  });
+});
+
+describe("house and restrictions", () => {
+  it("requires a house (or the explicit \"outside the houses\" choice)", () => {
+    const r = submit({ houseId: "" });
+    expect(!r.ok && r.errors.houseId).toBe("house_required");
+    const none = submit({ houseId: HOUSE_NONE });
+    expect(none.ok && none.data.houseId).toBeNull();
+  });
+  it("stores the house, the space impact and the note", () => {
+    const r = submit({ audience: "HOUSE_ONLY", spaceImpact: "CLOSED", restrictionNote: "  Salon fermé de 18h à 22h  " });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.data.houseId).toBe("house1");
+      expect(r.data.audience).toBe("HOUSE_ONLY");
+      expect(r.data.spaceImpact).toBe("CLOSED");
+      expect(r.data.restrictionNote).toBe("Salon fermé de 18h à 22h");
+    }
+  });
+  it("cannot reserve an event for the residents of no house", () => {
+    const r = submit({ houseId: HOUSE_NONE, audience: "HOUSE_ONLY" });
+    expect(!r.ok && r.errors.audience).toBe("house_only_needs_house");
+  });
+  it("limits the note to 200 characters", () => {
+    expect(submit({ restrictionNote: "x".repeat(200) }).ok).toBe(true);
+    const r = submit({ restrictionNote: "x".repeat(201) });
+    expect(!r.ok && r.errors.restrictionNote).toBe("note_long");
+  });
+  it("rejects a space that belongs to another house, but accepts generic spaces", () => {
+    const venueHouse = { venue1: "house2", generic: null };
+    const mismatch = submit({}, { venueHouse });
+    expect(!mismatch.ok && mismatch.errors.venueId).toBe("venue_house_mismatch");
+    expect(submit({ venueId: "generic" }, { venueHouse }).ok).toBe(true);
+    expect(submit({ houseId: "house2" }, { venueHouse }).ok).toBe(true);
   });
 });
 

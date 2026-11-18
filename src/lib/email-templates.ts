@@ -20,20 +20,20 @@ function layout(blocks: Block[], footer: string, extraFooter?: { label: string; 
   const html = blocks
     .map((b, i) => {
       const parts: string[] = [];
-      if (b.heading) parts.push(`<h1 style="font:600 20px/1.3 Arial,sans-serif;margin:0 0 12px;color:#16181D">${esc(b.heading)}</h1>`);
-      for (const p of b.paragraphs ?? []) parts.push(`<p style="font:16px/1.5 Arial,sans-serif;margin:0 0 12px;color:#16181D">${esc(p)}</p>`);
-      if (b.quote) parts.push(`<blockquote style="margin:0 0 16px;padding:12px 16px;background:#EEF3F0;border-left:4px solid #1F5D4C;font:16px/1.5 Arial,sans-serif;color:#16181D">${esc(b.quote)}</blockquote>`);
+      if (b.heading) parts.push(`<h1 style="font:600 20px/1.3 Arial,sans-serif;margin:0 0 12px;color:#1E2023">${esc(b.heading)}</h1>`);
+      for (const p of b.paragraphs ?? []) parts.push(`<p style="font:16px/1.5 Arial,sans-serif;margin:0 0 12px;color:#1E2023">${esc(p)}</p>`);
+      if (b.quote) parts.push(`<blockquote style="margin:0 0 16px;padding:12px 16px;background:#E6F8F2;border-left:4px solid #47D7AC;font:16px/1.5 Arial,sans-serif;color:#1E2023">${esc(b.quote)}</blockquote>`);
       if (b.list?.length) {
         parts.push(
           `<ul style="padding:0;margin:0 0 16px;list-style:none">${b.list
             .map(
               (it) =>
-                `<li style="padding:10px 0;border-top:1px solid #E2E2DA"><a href="${esc(it.url)}" style="font:600 16px/1.4 Arial,sans-serif;color:#1F5D4C;text-decoration:underline">${esc(it.title)}</a><br><span style="font:14px/1.5 Arial,sans-serif;color:#55574F">${esc(it.meta)}</span></li>`,
+                `<li style="padding:10px 0;border-top:1px solid #E2E2DA"><a href="${esc(it.url)}" style="font:600 16px/1.4 Arial,sans-serif;color:#0A7D5E;text-decoration:underline">${esc(it.title)}</a><br><span style="font:14px/1.5 Arial,sans-serif;color:#55574F">${esc(it.meta)}</span></li>`,
             )
             .join("")}</ul>`,
         );
       }
-      if (b.button) parts.push(`<p style="margin:16px 0"><a href="${esc(b.button.url)}" style="display:inline-block;background:#1F5D4C;color:#FFFFFF;text-decoration:none;font:600 16px Arial,sans-serif;padding:12px 24px;border-radius:999px">${esc(b.button.label)}</a></p><p style="font:13px/1.5 Arial,sans-serif;color:#55574F;margin:0 0 12px;word-break:break-all">${esc(b.button.url)}</p>`);
+      if (b.button) parts.push(`<p style="margin:16px 0"><a href="${esc(b.button.url)}" style="display:inline-block;background:#47D7AC;color:#1E2023;text-decoration:none;font:600 16px Arial,sans-serif;padding:12px 24px;border-radius:999px">${esc(b.button.label)}</a></p><p style="font:13px/1.5 Arial,sans-serif;color:#55574F;margin:0 0 12px;word-break:break-all">${esc(b.button.url)}</p>`);
       return (i > 0 ? `<hr style="border:0;border-top:1px solid #E2E2DA;margin:24px 0">` : "") + parts.join("");
     })
     .join("");
@@ -117,6 +117,9 @@ export type DigestEvent = {
   startAt: Date;
   endAt: Date;
   place: string;
+  houseSlug: string | null;
+  categorySlug: string;
+  audience: string;
 };
 
 export function weeklyDigestEmail(

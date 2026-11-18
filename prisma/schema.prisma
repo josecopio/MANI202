@@ -20,9 +20,18 @@ enum Role {
   ADMIN
 }
 
+// Who may attend. HOUSE_ONLY = only the residents of the house hosting the event.
 enum Audience {
   RESIDENTS_ONLY
   PUBLIC
+  HOUSE_ONLY
+}
+
+// What the event does to the space where it takes place, for everyone not attending.
+enum SpaceImpact {
+  NONE
+  LIMITED
+  CLOSED
 }
 
 enum Recurrence {
@@ -108,13 +117,31 @@ model Category {
   events    Event[]
 }
 
+// A residence ("maison") or a shared site (Maison internationale, sports centre, park...).
+// Residents subscribe to the houses they live in and use; events belong to a house.
+model House {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  nameFr      String
+  nameEn      String
+  isResidence Boolean @default(true) // false = shared site nobody lives in (cannot be a "home")
+  sortOrder   Int     @default(0)
+  venues      Venue[]
+  events      Event[]
+}
+
+// A space (room, garden...). houseId = null: generic spaces usable in any house ("Other").
 model Venue {
   id        String  @id @default(cuid())
+  houseId   String?
   nameFr    String
   nameEn    String
   isOther   Boolean @default(false) // when true, Event.customLocation is mandatory
   sortOrder Int     @default(0)
   events    Event[]
+  house     House?  @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([houseId])
 }
 
 model Event {
@@ -125,8 +152,12 @@ model Event {
   startAt         DateTime
   endAt           DateTime
   venueId         String
+  houseId         String? // null = not tied to a house (general event)
   customLocation  String?
   audience        Audience    @default(RESIDENTS_ONLY)
+  spaceImpact     SpaceImpact @default(NONE)
+  restrictionNote String? // max 200 characters, e.g. "Grand salon réservé de 18h à 22h"
+
   organiserName   String
   contactEmail    String
   registrationUrl String?
@@ -143,6 +174,7 @@ model Event {
 
   category  Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   venue     Venue      @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  house     House?     @relation(fields: [houseId], references: [id], onDelete: Restrict)
   createdBy User       @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
   interests Interest[]
 
@@ -150,6 +182,7 @@ model Event {
   @@index([createdById])
   @@index([categoryId])
   @@index([venueId])
+  @@index([houseId])
 }
 
 // "I'm interested": either a signed-in user or an anonymous device cookie.
@@ -171,13 +204,18 @@ model Interest {
 
 // Weekly email subscribers (double opt-in).
 model Subscriber {
-  id          String    @id @default(cuid())
-  email       String    @unique
-  locale      String    @default("fr")
-  token       String    @unique @default(cuid())
-  confirmedAt DateTime?
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  locale             String    @default("fr")
+  /// Comma-separated slugs: the weekly email only lists these houses (+ general events in the interests). Empty = everything.
+  houseSlugs         String    @default("")
+  /// Slug of the subscriber\'s own house (its reserved events count as open to them).
+  homeSlug           String    @default("")
+  categorySlugs      String    @default("")
+  token              String    @unique @default(cuid())
+  confirmedAt        DateTime?
   /// Last confirmation email sent (cooldown against email-bombing a third party)
   confirmationSentAt DateTime?
-  lastSentAt  DateTime?
-  createdAt   DateTime  @default(now())
+  lastSentAt         DateTime?
+  createdAt          DateTime  @default(now())
 }

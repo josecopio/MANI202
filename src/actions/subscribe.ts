@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { sendMailSafely } from "@/lib/email";
 import { subscribeConfirmationEmail } from "@/lib/email-templates";
 import { getLocale } from "@/lib/i18n/server";
+import { getPrefs } from "@/lib/prefs";
+import { followedHouses } from "@/lib/prefs-shared";
 import { emailSchema } from "@/lib/validation";
 
 export type SubscribeState = { status?: "sent" | "invalid" | "error" };
@@ -19,6 +21,13 @@ export async function subscribeAction(_prev: SubscribeState, formData: FormData)
   if (!parsed.success) return { status: "invalid" };
   const email = parsed.data;
   const locale = await getLocale();
+  // The weekly e-mail follows the houses and interests the resident chose on this device.
+  const prefs = await getPrefs();
+  const choice = {
+    homeSlug: prefs.home ?? "",
+    houseSlugs: followedHouses(prefs).join(","),
+    categorySlugs: prefs.general ? prefs.interests.join(",") : "",
+  };
 
   try {
     const existing = await db.subscriber.findUnique({ where: { email } });
@@ -28,8 +37,8 @@ export async function subscribeAction(_prev: SubscribeState, formData: FormData)
     }
     const subscriber = await db.subscriber.upsert({
       where: { email },
-      update: { locale, confirmationSentAt: new Date() },
-      create: { email, locale, confirmationSentAt: new Date() },
+      update: { locale, confirmationSentAt: new Date(), ...choice },
+      create: { email, locale, confirmationSentAt: new Date(), ...choice },
     });
     await sendMailSafely(subscribeConfirmationEmail(email, subscriber.token, locale));
     return { status: "sent" };

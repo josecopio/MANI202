@@ -13,7 +13,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CategoryTag } from "@/components/ui/CategoryTag";
 import { DeleteEventButton } from "@/components/ui/DeleteEventButton";
 import { ReviewCard, type ReviewEvent } from "@/components/admin/ReviewCard";
-import { CategoryManager, VenueManager } from "@/components/admin/ReferenceManager";
+import { CategoryManager, HouseManager, VenueManager } from "@/components/admin/ReferenceManager";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const PAGE_SIZE = 25;
-type Tab = "review" | "events" | "categories" | "venues";
+type Tab = "review" | "events" | "categories" | "houses" | "venues";
 
 export default async function AdminPage({
   searchParams,
@@ -31,13 +31,14 @@ export default async function AdminPage({
   await requireAdmin("/admin");
   const { locale, t } = await getI18n();
   const sp = await searchParams;
-  const tab: Tab = (["review", "events", "categories", "venues"] as const).find((x) => x === sp.tab) ?? "review";
+  const tab: Tab = (["review", "events", "categories", "houses", "venues"] as const).find((x) => x === sp.tab) ?? "review";
 
   const pendingCount = await db.event.count({ where: { status: "PENDING" } });
   const tabs: [Tab, string][] = [
     ["review", `${t.admin.tabReview}${pendingCount ? ` (${pendingCount})` : ""}`],
     ["events", t.admin.tabEvents],
     ["categories", t.admin.tabCategories],
+    ["houses", t.admin.tabHouses],
     ["venues", t.admin.tabVenues],
   ];
 
@@ -56,7 +57,7 @@ export default async function AdminPage({
             key={key}
             href={`/admin?tab=${key}`}
             aria-current={tab === key ? "page" : undefined}
-            className={cn("pill", tab === key && "!border-accent !bg-accent !text-white")}
+            className={cn("pill", tab === key && "!border-brand !bg-brand !text-ink")}
           >
             {label}
           </Link>
@@ -67,6 +68,7 @@ export default async function AdminPage({
         {tab === "review" && <ReviewTab />}
         {tab === "events" && <EventsTab status={sp.status} page={Number(sp.page) || 1} />}
         {tab === "categories" && <CategoriesTab />}
+        {tab === "houses" && <HousesTab />}
         {tab === "venues" && <VenuesTab />}
       </div>
     </div>
@@ -77,7 +79,7 @@ export default async function AdminPage({
   async function ReviewTab() {
     const rows = await db.event.findMany({
       where: { status: "PENDING" },
-      include: { venue: true, category: true, createdBy: { select: { email: true } } },
+      include: { venue: true, house: true, category: true, createdBy: { select: { email: true } } },
       orderBy: { updatedAt: "asc" },
     });
     if (rows.length === 0) {
@@ -90,9 +92,12 @@ export default async function AdminPage({
       dayKey: dayKeyOf(e.startAt),
       startAt: e.startAt.toISOString(),
       endAt: e.endAt.toISOString(),
-      place: placeLabel(e.venue, e.customLocation, locale),
+      place: placeLabel(e.house, e.venue, e.customLocation, locale),
       category: { name: locale === "fr" ? e.category.nameFr : e.category.nameEn, color: e.category.color, bgColor: e.category.bgColor },
       audience: e.audience,
+      houseName: e.house ? (locale === "fr" ? e.house.nameFr : e.house.nameEn) : null,
+      spaceImpact: e.spaceImpact,
+      restrictionNote: e.restrictionNote,
       organiserName: e.organiserName,
       contactEmail: e.contactEmail,
       submittedBy: e.createdBy.email,
@@ -124,7 +129,7 @@ export default async function AdminPage({
     const current = Math.min(Math.max(1, page), pages);
     const rows = await db.event.findMany({
       where,
-      include: { venue: true, category: true },
+      include: { venue: true, house: true, category: true },
       orderBy: { startAt: "desc" },
       skip: (current - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -139,7 +144,7 @@ export default async function AdminPage({
               key={s ?? "all"}
               href={`/admin?tab=events${s ? `&status=${s}` : ""}`}
               aria-current={statusFilter === s ? "true" : undefined}
-              className={cn("pill", statusFilter === s && "!border-accent !bg-accent !text-white")}
+              className={cn("pill", statusFilter === s && "!border-brand !bg-brand !text-ink")}
             >
               {s ? t.status[s] : t.admin.allStatuses}
             </Link>
@@ -203,8 +208,24 @@ export default async function AdminPage({
     return <CategoryManager rows={rows.map(({ _count, ...c }) => ({ ...c, used: _count.events }))} />;
   }
 
+  async function HousesTab() {
+    const rows = await db.house.findMany({
+      orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }],
+      include: { _count: { select: { events: true, venues: true } } },
+    });
+    return <HouseManager rows={rows.map(({ _count, slug: _slug, ...h }) => ({ ...h, used: _count.events, spaces: _count.venues }))} />;
+  }
+
   async function VenuesTab() {
-    const rows = await db.venue.findMany({ orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }], include: { _count: { select: { events: true } } } });
-    return <VenueManager rows={rows.map(({ _count, ...v }) => ({ ...v, used: _count.events }))} />;
+    const [rows, houses] = await Promise.all([
+      db.venue.findMany({ orderBy: [{ houseId: "asc" }, { sortOrder: "asc" }, { nameFr: "asc" }], include: { _count: { select: { events: true } } } }),
+      db.house.findMany({ orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }] }),
+    ]);
+    return (
+      <VenueManager
+        rows={rows.map(({ _count, ...v }) => ({ ...v, used: _count.events }))}
+        houses={houses.map((h) => ({ id: h.id, name: locale === "fr" ? h.nameFr : h.nameEn }))}
+      />
+    );
   }
 }

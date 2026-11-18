@@ -22,7 +22,7 @@ export default async function MyEventsPage({ searchParams }: { searchParams: Pro
 
   const events = await db.event.findMany({
     where: { createdById: user.id },
-    include: { venue: true, category: true },
+    include: { venue: true, house: true, category: true },
     orderBy: { startAt: "desc" },
   });
 
@@ -75,7 +75,7 @@ export default async function MyEventsPage({ searchParams }: { searchParams: Pro
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <MapPin size={14} aria-hidden="true" />
-                      {placeLabel(e.venue, e.customLocation, locale)}
+                      {placeLabel(e.house, e.venue, e.customLocation, locale)}
                     </span>
                     {e.recurrence !== "NONE" && (
                       <span className="inline-flex items-center gap-1">

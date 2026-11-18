@@ -2,10 +2,13 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarPlus, ExternalLink, Mail, MapPin, Repeat, Users, CalendarClock } from "lucide-react";
+import { ArrowLeft, CalendarPlus, ExternalLink, Home, Mail, MapPin, Repeat, Users, CalendarClock } from "lucide-react";
 import { getI18n } from "@/lib/i18n/server";
 import { getCurrentUser, canManageEvent } from "@/lib/permissions";
 import { getDeviceId } from "@/lib/device";
+import { getPrefs } from "@/lib/prefs";
+import { isEligible } from "@/lib/prefs-shared";
+import { AccessDetails } from "@/components/events/AccessBadges";
 import { getEventWithRelations, getInterestedEventIds, placeLabel } from "@/lib/queries";
 import { dayKeyOf, formatDayLong, formatTime } from "@/lib/dates";
 import { expandOccurrences } from "@/lib/recurrence";
@@ -33,7 +36,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!event) return { title: "404" };
 
   const when = `${formatDayLong(dayKeyOf(event.startAt), locale)}, ${formatTime(event.startAt, locale)}`;
-  const description = `${when} · ${placeLabel(event.venue, event.customLocation, locale)} — ${event.description}`.slice(0, 200);
+  const description = `${when} · ${placeLabel(event.house, event.venue, event.customLocation, locale)} — ${event.description}`.slice(0, 200);
   const image = event.imageUrl ? [{ url: event.imageUrl.startsWith("/") ? `${getBaseUrl()}${event.imageUrl}` : event.imageUrl }] : undefined;
 
   return {
@@ -62,6 +65,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
 
   const user = await getCurrentUser();
   const interestedIds = await getInterestedEventIds({ userId: user?.id, deviceId: await getDeviceId() });
+  const prefs = await getPrefs();
+  const houseName = event.house ? (locale === "fr" ? event.house.nameFr : event.house.nameEn) : null;
+  const eligible = isEligible(event.audience, event.house?.slug ?? null, prefs.home);
   const published = event.status === "PUBLISHED";
   const category = { name: locale === "fr" ? event.category.nameFr : event.category.nameEn, color: event.category.color, bgColor: event.category.bgColor };
 
@@ -93,8 +99,14 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         </>
       ),
     },
-    { icon: MapPin, label: t.detail.where, value: placeLabel(event.venue, event.customLocation, locale) },
-    { icon: Users, label: t.detail.audience, value: event.audience === "RESIDENTS_ONLY" ? t.card.audienceResidents : t.card.audiencePublic },
+    { icon: MapPin, label: t.detail.where, value: placeLabel(event.house, event.venue, event.customLocation, locale) },
+    {
+      icon: Home,
+      label: t.detail.house,
+      value: event.house ? (
+        <Link href={`/houses/${event.house.slug}`} className="text-accent underline underline-offset-2">{houseName}</Link>
+      ) : null,
+    },
     { icon: Users, label: t.detail.organiser, value: event.organiserName },
     {
       icon: Mail,
@@ -140,6 +152,13 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
               </div>
             ))}
           </dl>
+
+          <div className="mt-6">
+            <AccessDetails
+              event={{ audience: event.audience, houseName, eligible, spaceImpact: event.spaceImpact }}
+              note={event.restrictionNote}
+            />
+          </div>
 
           <p className="mt-6 whitespace-pre-line text-lg leading-relaxed">{event.description}</p>
 

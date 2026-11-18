@@ -11,6 +11,8 @@ export type IcsEvent = {
   categoryName?: string;
   organiserName: string;
   audienceLabel?: string;
+  /** Extra lines for the description (access restrictions), shown before the organiser. */
+  extraLines?: string[];
   url: string;
   recurrence: Recurrence;
   recurrenceEnd: Date | null;
@@ -108,6 +110,7 @@ function eventLines(e: IcsEvent, opts: IcsOptions, stamp: Date): string[] {
   }
 
   const descriptionParts = [e.description];
+  if (e.extraLines?.length) descriptionParts.push(e.extraLines.join("\n"));
   descriptionParts.push(`${e.organiserName}${e.audienceLabel ? ` - ${e.audienceLabel}` : ""}`);
   descriptionParts.push(e.url);
 

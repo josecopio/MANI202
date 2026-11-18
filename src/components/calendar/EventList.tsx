@@ -6,18 +6,21 @@ import { formatTime, formatDayShort, weekdayLabels } from "@/lib/dates";
 import { useI18n } from "@/lib/i18n/client";
 import type { CalendarEvent, CategoryView } from "@/lib/queries";
 import { CategoryTag } from "@/components/ui/CategoryTag";
+import { AccessBadges } from "@/components/events/AccessBadges";
+import type { EventColor } from "./colors";
 import { cn } from "@/lib/utils";
 
 type Props = {
   label: string;
   events: CalendarEvent[];
   categories: Map<string, CategoryView>;
+  colorOf: (e: CalendarEvent) => EventColor;
   selectedDay: string;
   busy: boolean;
   onPick: (event: CalendarEvent) => void;
 };
 
-export function EventList({ label, events, categories, selectedDay, busy, onPick }: Props) {
+export function EventList({ label, events, categories, colorOf, selectedDay, busy, onPick }: Props) {
   const { locale, t } = useI18n();
   const weekdays = weekdayLabels(locale);
 
@@ -37,7 +40,11 @@ export function EventList({ label, events, categories, selectedDay, busy, onPick
           const c = categories.get(e.categorySlug);
           const weekday = weekdays[(new Date(`${e.dayKey}T12:00:00Z`).getUTCDay() + 6) % 7].short;
           return (
-            <li key={e.key} className={cn("flex items-stretch", e.dayKey === selectedDay && "bg-accent-soft")}>
+            <li
+              key={e.key}
+              className={cn("flex items-stretch border-l-4", e.dayKey === selectedDay && "bg-accent-soft", !e.eligible && "bg-bg")}
+              style={{ borderLeftColor: colorOf(e).color }}
+            >
               <button
                 type="button"
                 onClick={() => onPick(e)}
@@ -56,11 +63,14 @@ export function EventList({ label, events, categories, selectedDay, busy, onPick
                     {e.title}
                   </span>
                   <span className="mt-0.5 flex items-center gap-1 text-sm text-muted">
-                    <MapPin size={14} aria-hidden="true" className="shrink-0" />
+                    <MapPin size={14} aria-hidden="true" className="shrink-0" style={{ color: colorOf(e).color }} />
                     <span className="truncate">{e.place}</span>
                   </span>
                 </span>
-                <span className="col-start-2 sm:col-start-auto">{c && <CategoryTag category={c} />}</span>
+                <span className="col-start-2 flex flex-wrap items-center gap-1.5 sm:col-start-auto sm:justify-end">
+                  <AccessBadges event={e} compact />
+                  {c && <CategoryTag category={c} />}
+                </span>
                 <span className="sr-only">{t.calendar.showInAgenda}</span>
               </button>
               <Link

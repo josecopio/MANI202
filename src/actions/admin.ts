@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { assertAdmin } from "@/lib/permissions";
 import { approvedEmail, rejectedEmail } from "@/lib/email-templates";
 import { sendMailSafely } from "@/lib/email";
-import { categorySchema, rejectionSchema, slugify, venueSchema, type ErrorKey } from "@/lib/validation";
+import { categorySchema, houseSchema, rejectionSchema, slugify, venueSchema, type ErrorKey } from "@/lib/validation";
 
 export type AdminResult = { ok: boolean; error?: ErrorKey | "forbidden" | "in_use" | "not_found"; fields?: Record<string, ErrorKey> };
 
@@ -105,6 +105,7 @@ export async function deleteCategoryAction(id: string): Promise<AdminResult> {
 export async function saveVenueAction(_prev: AdminResult | null, formData: FormData): Promise<AdminResult> {
   if (!(await admin())) return { ok: false, error: "forbidden" };
   const parsed = venueSchema.safeParse({
+    houseId: formData.get("houseId") ?? "",
     nameFr: formData.get("nameFr"),
     nameEn: formData.get("nameEn"),
     isOther: formData.get("isOther") === "on",
@@ -112,8 +113,11 @@ export async function saveVenueAction(_prev: AdminResult | null, formData: FormD
   });
   if (!parsed.success) return { ok: false, fields: fieldErrors(parsed.error) };
   const id = String(formData.get("id") ?? "");
-  if (id) await db.venue.update({ where: { id }, data: parsed.data });
-  else await db.venue.create({ data: parsed.data });
+  const { houseId, ...rest } = parsed.data;
+  const house = houseId ? await db.house.findUnique({ where: { id: houseId }, select: { id: true } }) : null;
+  const data = { ...rest, houseId: house?.id ?? null };
+  if (id) await db.venue.update({ where: { id }, data });
+  else await db.venue.create({ data });
   refresh();
   return { ok: true };
 }
@@ -123,5 +127,43 @@ export async function deleteVenueAction(id: string): Promise<AdminResult> {
   if ((await db.event.count({ where: { venueId: id } })) > 0) return { ok: false, error: "in_use" };
   await db.venue.delete({ where: { id } }).catch(() => undefined);
   refresh();
+  return { ok: true };
+}
+
+// ---- Houses -----------------------------------------------------------------------------
+
+export async function saveHouseAction(_prev: AdminResult | null, formData: FormData): Promise<AdminResult> {
+  if (!(await admin())) return { ok: false, error: "forbidden" };
+  const parsed = houseSchema.safeParse({
+    nameFr: formData.get("nameFr"),
+    nameEn: formData.get("nameEn"),
+    isResidence: formData.get("isResidence") === "on",
+    sortOrder: formData.get("sortOrder") ?? 0,
+  });
+  if (!parsed.success) return { ok: false, fields: fieldErrors(parsed.error) };
+  const id = String(formData.get("id") ?? "");
+
+  if (id) {
+    // The slug is part of residents' saved choices and calendar links: it never changes.
+    await db.house.update({ where: { id }, data: parsed.data });
+  } else {
+    const base = slugify(parsed.data.nameEn) || "house";
+    let slug = base;
+    for (let n = 2; await db.house.findUnique({ where: { slug } }); n++) slug = `${base}-${n}`;
+    await db.house.create({ data: { ...parsed.data, slug } });
+  }
+  refresh();
+  revalidatePath("/houses");
+  return { ok: true };
+}
+
+export async function deleteHouseAction(id: string): Promise<AdminResult> {
+  if (!(await admin())) return { ok: false, error: "forbidden" };
+  // Spaces are deleted with their house, so neither the house nor its spaces may have events.
+  const used = await db.event.count({ where: { OR: [{ houseId: id }, { venue: { houseId: id } }] } });
+  if (used > 0) return { ok: false, error: "in_use" };
+  await db.house.delete({ where: { id } }).catch(() => undefined);
+  refresh();
+  revalidatePath("/houses");
   return { ok: true };
 }

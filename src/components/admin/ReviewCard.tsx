@@ -1,5 +1,6 @@
 "use client";
 
+import { audienceLabel, impactLabel } from "@/lib/restrictions";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -19,7 +20,10 @@ export type ReviewEvent = {
   endAt: string;
   place: string;
   category: { name: string; color: string; bgColor: string };
-  audience: "RESIDENTS_ONLY" | "PUBLIC";
+  audience: "RESIDENTS_ONLY" | "PUBLIC" | "HOUSE_ONLY";
+  houseName: string | null;
+  spaceImpact: "NONE" | "LIMITED" | "CLOSED";
+  restrictionNote: string | null;
   organiserName: string;
   contactEmail: string;
   submittedBy: string;
@@ -80,9 +84,14 @@ export function ReviewCard({ event }: { event: ReviewEvent }) {
         <p className="mt-3 whitespace-pre-line">{event.description}</p>
         <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
           <div><dt className="inline font-semibold">{t.card.organiser} : </dt><dd className="inline text-muted">{event.organiserName}</dd></div>
-          <div><dt className="inline font-semibold">{t.card.audience} : </dt><dd className="inline text-muted">{event.audience === "RESIDENTS_ONLY" ? t.card.audienceResidents : t.card.audiencePublic}</dd></div>
+          <div><dt className="inline font-semibold">{t.restrictions.accessLabel} : </dt><dd className="inline text-muted">{audienceLabel(t, event)}</dd></div>
           <div><dt className="inline font-semibold">{t.detail.contact} : </dt><dd className="inline text-muted">{event.contactEmail}</dd></div>
         </dl>
+        {(event.spaceImpact !== "NONE" || event.restrictionNote) && (
+          <p className="mt-2 rounded-control bg-warn-soft p-2 text-sm text-warn">
+            {impactLabel(t, event.spaceImpact)}{event.spaceImpact !== "NONE" && event.restrictionNote ? " — " : ""}{event.restrictionNote}
+          </p>
+        )}
         <div className="mt-2 space-y-1 text-sm text-muted">
           <p>{fmt(t.admin.submittedBy, { email: event.submittedBy })}</p>
           {event.recurrenceLabel && (

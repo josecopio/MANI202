@@ -1,5 +1,5 @@
 import { dayKeyOf, timeOf } from "./dates";
-import type { EventFormValues } from "./validation";
+import { HOUSE_NONE, type EventFormValues } from "./validation";
 
 export function eventToFormValues(e: {
   title: string;
@@ -7,9 +7,12 @@ export function eventToFormValues(e: {
   description: string;
   startAt: Date;
   endAt: Date;
+  houseId: string | null;
   venueId: string;
   customLocation: string | null;
-  audience: "RESIDENTS_ONLY" | "PUBLIC";
+  audience: "RESIDENTS_ONLY" | "PUBLIC" | "HOUSE_ONLY";
+  spaceImpact: "NONE" | "LIMITED" | "CLOSED";
+  restrictionNote: string | null;
   organiserName: string;
   contactEmail: string;
   registrationUrl: string | null;
@@ -24,9 +27,12 @@ export function eventToFormValues(e: {
     date: dayKeyOf(e.startAt),
     startTime: timeOf(e.startAt),
     endTime: timeOf(e.endAt),
+    houseId: e.houseId ?? HOUSE_NONE,
     venueId: e.venueId,
     customLocation: e.customLocation ?? "",
     audience: e.audience,
+    spaceImpact: e.spaceImpact,
+    restrictionNote: e.restrictionNote ?? "",
     organiserName: e.organiserName,
     contactEmail: e.contactEmail,
     registrationUrl: e.registrationUrl ?? "",

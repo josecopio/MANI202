@@ -3,14 +3,16 @@
 import { useMemo } from "react";
 import { addDaysToKey, weekdayLabels, formatDayLong, type GridDay } from "@/lib/dates";
 import { useI18n, usePlural } from "@/lib/i18n/client";
-import type { CalendarEvent, CategoryView } from "@/lib/queries";
+import { DoorClosed, Lock, TriangleAlert } from "lucide-react";
+import type { CalendarEvent } from "@/lib/queries";
+import type { EventColor } from "./colors";
 import { cn } from "@/lib/utils";
 
 type Props = {
   label: string;
   days: GridDay[];
   eventsByDay: Map<string, CalendarEvent[]>;
-  categories: Map<string, CategoryView>;
+  colorOf: (e: CalendarEvent) => EventColor;
   selectedDay: string;
   todayKey: string;
   busy: boolean;
@@ -19,7 +21,7 @@ type Props = {
 
 const MAX_CHIPS = 2;
 
-export function MonthGrid({ label, days, eventsByDay, categories, selectedDay, todayKey, busy, onSelect }: Props) {
+export function MonthGrid({ label, days, eventsByDay, colorOf, selectedDay, todayKey, busy, onSelect }: Props) {
   const { locale, t } = useI18n();
   const plural = usePlural();
   const weekdays = useMemo(() => weekdayLabels(locale), [locale]);
@@ -107,7 +109,7 @@ export function MonthGrid({ label, days, eventsByDay, categories, selectedDay, t
                       <span
                         className={cn(
                           "flex h-7 w-7 items-center justify-center self-center rounded-full text-sm font-semibold sm:self-start",
-                          isToday ? "bg-accent text-white" : day.inMonth ? "text-ink" : "text-muted",
+                          isToday ? "bg-brand text-ink" : day.inMonth ? "text-ink" : "text-muted",
                         )}
                         aria-hidden="true"
                       >
@@ -121,21 +123,27 @@ export function MonthGrid({ label, days, eventsByDay, categories, selectedDay, t
                             <span
                               key={e.key}
                               className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: categories.get(e.categorySlug)?.color ?? "#55574F" }}
+                              style={{ backgroundColor: colorOf(e).color }}
                             />
                           ))}
                         </span>
                       )}
                       <span className="hidden min-w-0 flex-col gap-1 sm:flex" aria-hidden="true">
                         {events.slice(0, MAX_CHIPS).map((e) => {
-                          const c = categories.get(e.categorySlug);
+                          const c = colorOf(e);
+                          const Marker = e.audience === "HOUSE_ONLY" ? Lock : e.spaceImpact === "CLOSED" ? DoorClosed : e.spaceImpact === "LIMITED" ? TriangleAlert : null;
                           return (
                             <span
                               key={e.key}
-                              className={cn("block truncate rounded-md px-1.5 py-0.5 text-xs font-semibold", !day.inMonth && "opacity-90")}
-                              style={{ color: c?.color ?? "#16181D", backgroundColor: c?.bgColor ?? "#ECECE6" }}
+                              className={cn(
+                                "flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-xs font-semibold",
+                                !day.inMonth && "opacity-90",
+                                !e.eligible && "line-through decoration-1",
+                              )}
+                              style={{ color: c.color, backgroundColor: c.bg, boxShadow: `inset 3px 0 0 ${c.color}` }}
                             >
-                              {e.title}
+                              {Marker && <Marker size={11} aria-hidden="true" className="shrink-0" />}
+                              <span className="truncate">{e.title}</span>
                             </span>
                           );
                         })}

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/client";
 import { getI18n } from "@/lib/i18n/server";
@@ -8,9 +8,9 @@ import { getBaseUrl } from "@/lib/site";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
+const montserrat = Montserrat({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-montserrat",
   display: "swap",
 });
 const inter = Inter({
@@ -30,19 +30,19 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = { themeColor: "#1F5D4C", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#47D7AC", width: "device-width", initialScale: 1 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, t } = await getI18n();
   const user = await getCurrentUser();
 
   return (
-    <html lang={locale} className={`${spaceGrotesk.variable} ${inter.variable}`}>
+    <html lang={locale} className={`${montserrat.variable} ${inter.variable}`}>
       <body>
         <I18nProvider locale={locale} messages={t}>
           <a
             href="#main"
-            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-pill focus:bg-accent focus:px-5 focus:py-3 focus:font-semibold focus:text-white"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-pill focus:bg-brand focus:px-5 focus:py-3 focus:font-semibold focus:text-ink"
           >
             {t.common.skipToContent}
           </a>

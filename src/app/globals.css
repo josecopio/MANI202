@@ -1,28 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #f7f7f3;
+  --color-bg: #f4f5f8;
   --color-surface: #ffffff;
-  --color-line: #e2e2da;
+  --color-line: #e3e5ec;
   /* Input borders, as specified. NOTE: 1.57:1 on white, below WCAG 1.4.11 (3:1) for form
      field boundaries. Use #8c8d84 (3.36:1) to comply - see README "Accessibility". */
-  --color-field: #cfcfc6;
-  --color-ink: #16181d;
-  --color-muted: #55574f;
-  --color-accent: #1f5d4c;
-  --color-accent-strong: #174a3c;
-  --color-accent-soft: #eef3f0;
+  --color-field: #cfd2da;
+  --color-ink: #1e2023;
+  --color-muted: #565c68;
+  /* Brand mint of the CIUP portal: used for fills, always with dark (ink) text on top. */
+  --color-brand: #47d7ac;
+  --color-brand-strong: #35c39a;
+  /* Deeper green for text, links and focus rings (5.1:1 on white). */
+  --color-accent: #0a7d5e;
+  --color-accent-strong: #08644c;
+  --color-accent-soft: #e6f8f2;
   --color-danger: #9b1c1c;
   --color-danger-soft: #fdeeee;
   --color-warn: #7a4b00;
   --color-warn-soft: #fff3d9;
-  --color-neutral-soft: #ecece6;
+  --color-neutral-soft: #eceef3;
+  --color-footer: #1e2023;
 
-  --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  --radius-control: 10px;
-  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-card: 20px;
   --radius-pill: 999px;
 }
 
@@ -44,7 +49,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-heading);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 :focus-visible {
@@ -104,11 +109,11 @@ h3 {
     cursor: not-allowed;
   }
   .btn-primary {
-    background: var(--color-accent);
-    color: #fff;
+    background: var(--color-brand);
+    color: var(--color-ink);
   }
   .btn-primary:hover:not(:disabled) {
-    background: var(--color-accent-strong);
+    background: var(--color-brand-strong);
   }
   .btn-secondary {
     background: var(--color-surface);
@@ -203,12 +208,12 @@ h3 {
     transition: background-color 0.15s, border-color 0.15s;
   }
   .pill:hover {
-    border-color: var(--color-accent);
+    border-color: var(--color-brand-strong);
   }
   .pill[aria-pressed="true"] {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
-    color: #fff;
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    color: var(--color-ink);
   }
 
   .badge {

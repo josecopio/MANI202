@@ -1,24 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarPlus, ChevronDown, ExternalLink, MapPin, Repeat, Users } from "lucide-react";
+import { CalendarPlus, ChevronDown, ExternalLink, MapPin, Repeat } from "lucide-react";
 import { formatDayLong, formatTime } from "@/lib/dates";
 import { useI18n, usePlural } from "@/lib/i18n/client";
 import type { CalendarEvent, CategoryView } from "@/lib/queries";
 import { CategoryTag } from "@/components/ui/CategoryTag";
 import { InterestButton } from "@/components/events/InterestButton";
+import { AccessBadges, AccessDetails } from "@/components/events/AccessBadges";
+import type { EventColor } from "./colors";
 import { cn, fmt } from "@/lib/utils";
 
 type Props = {
   day: string;
   events: CalendarEvent[];
   categories: Map<string, CategoryView>;
+  colorOf: (e: CalendarEvent) => EventColor;
   interested: Set<string>;
   expanded: Set<string>;
   onToggle: (key: string) => void;
 };
 
-export function AgendaPanel({ day, events, categories, interested, expanded, onToggle }: Props) {
+export function AgendaPanel({ day, events, categories, colorOf, interested, expanded, onToggle }: Props) {
   const { locale, t } = useI18n();
   const plural = usePlural();
 
@@ -36,9 +39,6 @@ export function AgendaPanel({ day, events, categories, interested, expanded, onT
       {events.length === 0 ? (
         <div className="mt-4 rounded-control bg-accent-soft p-4">
           <p className="font-semibold">{t.calendar.agendaEmpty}</p>
-          <Link href="/submit" className="mt-1 inline-flex min-h-11 items-center font-semibold text-accent underline underline-offset-2">
-            {t.calendar.agendaEmptyCta}
-          </Link>
         </div>
       ) : (
         <ul className="mt-4 space-y-3">
@@ -47,7 +47,11 @@ export function AgendaPanel({ day, events, categories, interested, expanded, onT
             const c = categories.get(e.categorySlug);
             const panelId = `agenda-panel-${e.key.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
             return (
-              <li key={e.key} className="rounded-control border border-line bg-surface">
+              <li
+                key={e.key}
+                className={cn("rounded-control border border-line border-l-4 bg-surface", !e.eligible && "bg-bg")}
+                style={{ borderLeftColor: colorOf(e).color }}
+              >
                 <h3 className="font-sans text-base">
                   <button
                     type="button"
@@ -67,6 +71,7 @@ export function AgendaPanel({ day, events, categories, interested, expanded, onT
                         <span>{e.place}</span>
                       </span>
                       <span className="mt-2 flex flex-wrap items-center gap-2">
+                        <AccessBadges event={e} compact />
                         {c && <CategoryTag category={c} />}
                         {e.isSample && <span className="badge bg-neutral-soft text-muted">{t.calendar.sample}</span>}
                       </span>
@@ -80,18 +85,12 @@ export function AgendaPanel({ day, events, categories, interested, expanded, onT
                 </h3>
 
                 <div id={panelId} hidden={!open} className="border-t border-line px-3 pb-3 pt-3">
-                  <p className="whitespace-pre-line text-[15px]">{e.description}</p>
+                  <AccessDetails event={e} note={e.restrictionNote} />
+                  <p className="mt-3 whitespace-pre-line text-[15px]">{e.description}</p>
                   <dl className="mt-3 space-y-1.5 text-sm">
                     <div className="flex gap-2">
                       <dt className="font-semibold">{t.card.organiser}</dt>
                       <dd className="text-muted">{e.organiserName}</dd>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <dt className="font-semibold">{t.card.audience}</dt>
-                      <dd className="flex items-center gap-1 text-muted">
-                        <Users size={14} aria-hidden="true" />
-                        {e.audience === "RESIDENTS_ONLY" ? t.card.audienceResidents : t.card.audiencePublic}
-                      </dd>
                     </div>
                     {e.recurrence !== "NONE" && e.recurrenceEnd && (
                       <div className="flex items-center gap-1 text-muted">

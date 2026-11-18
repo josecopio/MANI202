@@ -2,17 +2,20 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Check, ImagePlus, Repeat, Send, Trash2, Save } from "lucide-react";
+import { AlertCircle, Check, DoorClosed, ImagePlus, Lock, Repeat, Send, Trash2, Save, TriangleAlert } from "lucide-react";
 import { useI18n } from "@/lib/i18n/client";
 import { addDaysToKey } from "@/lib/dates";
 import {
   DESCRIPTION_MAX,
+  HOUSE_NONE,
+  NOTE_MAX,
   validateEvent,
   type EventErrors,
   type EventField,
   type EventFormValues,
 } from "@/lib/validation";
 import type { CategoryView, VenueView } from "@/lib/queries";
+import type { HouseView } from "@/lib/houses";
 import type { EventStatus } from "@/lib/types";
 import { saveEventAction, type SaveIntent } from "@/actions/events";
 import { cn, fmt } from "@/lib/utils";
@@ -23,6 +26,7 @@ type Props = {
   eventId?: string;
   initial: EventFormValues;
   categories: CategoryView[];
+  houses: HouseView[];
   venues: VenueView[];
   status?: EventStatus;
   rejectionReason?: string | null;
@@ -31,11 +35,12 @@ type Props = {
 };
 
 const FIELD_ORDER: EventField[] = [
-  "title", "categoryId", "description", "date", "startTime", "endTime", "venueId", "customLocation",
+  "title", "categoryId", "description", "date", "startTime", "endTime", "houseId", "venueId", "customLocation",
+  "audience", "restrictionNote",
   "recurrenceEnd", "organiserName", "contactEmail", "registrationUrl", "imageUrl",
 ];
 
-export function EventForm({ mode, eventId, initial, categories, venues, status, rejectionReason, todayKey, userEmail }: Props) {
+export function EventForm({ mode, eventId, initial, categories, houses, venues, status, rejectionReason, todayKey, userEmail }: Props) {
   const { t } = useI18n();
   const router = useRouter();
   const [values, setValues] = useState<EventFormValues>(initial);
@@ -50,6 +55,10 @@ export function EventForm({ mode, eventId, initial, categories, venues, status, 
 
   const repeats = values.recurrence !== "NONE";
   const otherVenueIds = venues.filter((v) => v.isOther).map((v) => v.id);
+  const venueHouse = Object.fromEntries(venues.map((v) => [v.id, v.houseId]));
+  // Spaces of the chosen house, plus the generic "Other" spaces that belong to no house.
+  const spaces = venues.filter((v) => v.houseId === null || v.houseId === values.houseId);
+  const noHouse = values.houseId === "" || values.houseId === HOUSE_NONE;
   const isOtherVenue = otherVenueIds.includes(values.venueId);
   const descLength = values.description.length;
   const publishedNotice = mode === "organiser" && status === "PUBLISHED";
@@ -78,6 +87,7 @@ export function EventForm({ mode, eventId, initial, categories, venues, status, 
       mode: lenient ? "draft" : "submit",
       allowPast: mode === "admin",
       otherVenueIds,
+      venueHouse,
     });
     if (!local.ok) {
       setErrors(local.errors);
@@ -239,26 +249,56 @@ export function EventForm({ mode, eventId, initial, categories, venues, status, 
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="houseId" label={t.submit.fieldHouse} error={errors.houseId} required>
+            {(p) => (
+              <select
+                {...p}
+                name="houseId"
+                className="input"
+                value={values.houseId}
+                onChange={(e) => {
+                  const houseId = e.target.value;
+                  setValues((v) => {
+                    // A space of another house no longer applies; "reserved for the house" needs a house.
+                    const keep = venues.find((x) => x.id === v.venueId && (x.houseId === null || x.houseId === houseId));
+                    return {
+                      ...v,
+                      houseId,
+                      venueId: keep ? v.venueId : "",
+                      audience: v.audience === "HOUSE_ONLY" && (houseId === "" || houseId === HOUSE_NONE) ? "RESIDENTS_ONLY" : v.audience,
+                    };
+                  });
+                  setErrors((er) => ({ ...er, houseId: undefined }));
+                }}
+              >
+                <option value="">{t.submit.housePlaceholder}</option>
+                {houses.map((h) => (
+                  <option key={h.id} value={h.id}>{h.name}</option>
+                ))}
+                <option value={HOUSE_NONE}>{t.submit.houseNone}</option>
+              </select>
+            )}
+          </Field>
           <Field name="venueId" label={t.submit.fieldVenue} error={errors.venueId} required>
             {(p) => (
-              <select {...p} name="venueId" className="input" value={values.venueId} onChange={(e) => set("venueId", e.target.value)}>
+              <select {...p} name="venueId" className="input" value={values.venueId} onChange={(e) => set("venueId", e.target.value)} disabled={values.houseId === ""}>
                 <option value="">{t.submit.venuePlaceholder}</option>
-                {venues.map((v) => (
+                {spaces.map((v) => (
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
               </select>
             )}
           </Field>
-          <Field
-            name="customLocation"
-            label={isOtherVenue ? t.submit.customLocationRequired : t.submit.fieldCustomLocation}
-            hint={isOtherVenue ? undefined : t.submit.customLocationHint}
-            error={errors.customLocation}
-            required={isOtherVenue}
-          >
-            {(p) => <input {...p} name="customLocation" className="input" value={values.customLocation} onChange={(e) => set("customLocation", e.target.value)} autoComplete="off" />}
-          </Field>
         </div>
+        <Field
+          name="customLocation"
+          label={isOtherVenue ? t.submit.customLocationRequired : t.submit.fieldCustomLocation}
+          hint={isOtherVenue ? undefined : t.submit.customLocationHint}
+          error={errors.customLocation}
+          required={isOtherVenue}
+        >
+          {(p) => <input {...p} name="customLocation" className="input" value={values.customLocation} onChange={(e) => set("customLocation", e.target.value)} autoComplete="off" />}
+        </Field>
 
         <div>
           <label className="flex min-h-11 cursor-pointer items-center gap-3 font-semibold">
@@ -280,7 +320,7 @@ export function EventForm({ mode, eventId, initial, categories, venues, status, 
                 <legend className="label">{t.submit.fieldFrequency}</legend>
                 <div className="flex flex-wrap gap-2">
                   {(["WEEKLY", "MONTHLY"] as const).map((f) => (
-                    <label key={f} className="pill has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent" style={values.recurrence === f ? { backgroundColor: "#1F5D4C", borderColor: "#1F5D4C", color: "#fff" } : undefined}>
+                    <label key={f} className="pill has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent" style={values.recurrence === f ? { backgroundColor: "#47D7AC", borderColor: "#47D7AC", color: "#1E2023" } : undefined}>
                       <input
                         type="radio"
                         name="frequency"
@@ -307,29 +347,86 @@ export function EventForm({ mode, eventId, initial, categories, venues, status, 
         </div>
       </section>
 
-      {/* 3. Audience and organiser */}
-      <section aria-labelledby="sec-audience" className="card space-y-5 p-5 sm:p-6">
-        <h2 id="sec-audience" className="font-heading text-xl font-bold">{t.submit.sectionAudience}</h2>
+      {/* 3. Access and restrictions */}
+      <section aria-labelledby="sec-access" className="card space-y-5 p-5 sm:p-6">
+        <div>
+          <h2 id="sec-access" className="font-heading text-xl font-bold">{t.submit.sectionAccess}</h2>
+          <p className="mt-1 text-muted">{t.submit.sectionAccessHint}</p>
+        </div>
 
-        <fieldset>
+        <fieldset aria-describedby={errors.audience ? "field-audience-error" : undefined}>
           <legend className="label">{t.submit.fieldAudience}</legend>
           <div className="flex flex-wrap gap-2">
-            {(["RESIDENTS_ONLY", "PUBLIC"] as const).map((a) => {
+            {(["PUBLIC", "RESIDENTS_ONLY", "HOUSE_ONLY"] as const).map((a, i) => {
               const on = values.audience === a;
+              const disabled = a === "HOUSE_ONLY" && noHouse;
               return (
                 <label
                   key={a}
-                  className="pill has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
-                  style={on ? { backgroundColor: "#1F5D4C", borderColor: "#1F5D4C", color: "#fff" } : undefined}
+                  className={cn(
+                    "pill has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
+                    disabled && "cursor-not-allowed opacity-50",
+                  )}
+                  style={on ? { backgroundColor: "#47D7AC", borderColor: "#47D7AC", color: "#1E2023" } : undefined}
+                  title={disabled ? t.submit.audienceHouseDisabled : undefined}
                 >
-                  <input type="radio" name="audience" value={a} checked={on} onChange={() => set("audience", a)} className="sr-only" />
-                  {on && <Check size={16} aria-hidden="true" />}
-                  {a === "RESIDENTS_ONLY" ? t.submit.audienceResidents : t.submit.audiencePublic}
+                  <input
+                    type="radio"
+                    name="audience"
+                    id={i === 0 ? "field-audience" : undefined}
+                    value={a}
+                    checked={on}
+                    disabled={disabled}
+                    onChange={() => set("audience", a)}
+                    className="sr-only"
+                  />
+                  {on ? <Check size={16} aria-hidden="true" /> : a === "HOUSE_ONLY" ? <Lock size={16} aria-hidden="true" /> : null}
+                  {a === "PUBLIC" ? t.submit.audiencePublic : a === "RESIDENTS_ONLY" ? t.submit.audienceResidents : t.submit.audienceHouse}
+                </label>
+              );
+            })}
+          </div>
+          {errors.audience && <p id="field-audience-error" className="field-error">{t.errors[errors.audience]}</p>}
+        </fieldset>
+
+        <fieldset>
+          <legend className="label">{t.submit.fieldImpact}</legend>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {(["NONE", "LIMITED", "CLOSED"] as const).map((im) => {
+              const on = values.spaceImpact === im;
+              const Icon = im === "CLOSED" ? DoorClosed : im === "LIMITED" ? TriangleAlert : Check;
+              return (
+                <label
+                  key={im}
+                  className={cn(
+                    "flex min-h-14 cursor-pointer items-start gap-2 rounded-control border bg-surface p-3 text-sm has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
+                    on ? "border-brand-strong bg-accent-soft font-semibold" : "border-field",
+                  )}
+                >
+                  <input type="radio" name="spaceImpact" value={im} checked={on} onChange={() => set("spaceImpact", im)} className="sr-only" />
+                  <Icon size={18} aria-hidden="true" className="mt-0.5 shrink-0" />
+                  {im === "NONE" ? t.submit.impactNone : im === "LIMITED" ? t.submit.impactLimited : t.submit.impactClosed}
                 </label>
               );
             })}
           </div>
         </fieldset>
+
+        <Field name="restrictionNote" label={t.submit.fieldNote} hint={t.submit.noteHint} error={errors.restrictionNote ?? (values.restrictionNote.length > NOTE_MAX ? "note_long" : undefined)} optional>
+          {(p) => (
+            <>
+              <textarea {...p} name="restrictionNote" rows={2} className="input" value={values.restrictionNote} onChange={(e) => set("restrictionNote", e.target.value)} />
+              <p className={cn("mt-1 text-right text-sm", values.restrictionNote.length > NOTE_MAX ? "font-semibold text-danger" : "text-muted")}>
+                {fmt(t.submit.charCount, { count: values.restrictionNote.length, max: NOTE_MAX })}
+              </p>
+            </>
+          )}
+        </Field>
+      </section>
+
+      {/* 4. Organiser */}
+      <section aria-labelledby="sec-audience" className="card space-y-5 p-5 sm:p-6">
+        <h2 id="sec-audience" className="font-heading text-xl font-bold">{t.submit.sectionAudience}</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field name="organiserName" label={t.submit.fieldOrganiser} error={errors.organiserName} required>
@@ -424,7 +521,7 @@ export function HowItWorks() {
       <ol className="mt-4 space-y-4">
         {steps.map(([title, body], i) => (
           <li key={title} className="flex gap-3">
-            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent font-heading font-bold text-white">
+            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand font-heading font-bold text-ink">
               {i + 1}
             </span>
             <div>

@@ -20,8 +20,8 @@ export function NavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "inline-flex min-h-11 items-center rounded-pill px-4 text-[15px] font-semibold transition-colors",
-        active ? "bg-accent-soft text-accent" : "text-ink hover:bg-accent-soft",
+        "inline-flex min-h-11 items-center rounded-pill px-3.5 text-[15px] font-semibold transition-colors",
+        active ? "bg-brand text-ink" : "text-ink hover:bg-accent-soft",
       )}
     >
       {children}

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getI18n } from "@/lib/i18n/server";
 import { canManageEvent, requireUser } from "@/lib/permissions";
 import { getCategories, getVenues } from "@/lib/queries";
+import { getHouses } from "@/lib/houses";
 import { todayKey } from "@/lib/dates";
 import { eventToFormValues } from "@/lib/event-helpers";
 import { EventForm, HowItWorks } from "@/components/forms/EventForm";
@@ -19,7 +20,7 @@ export default async function EditMyEventPage({ params }: { params: Promise<{ id
   const { locale, t } = await getI18n();
   const event = await db.event.findUnique({ where: { id } });
   if (!event || !canManageEvent(user, event)) notFound();
-  const [categories, venues] = await Promise.all([getCategories(locale), getVenues(locale)]);
+  const [categories, venues, houses] = await Promise.all([getCategories(locale), getVenues(locale), getHouses(locale)]);
 
   return (
     <div>
@@ -32,6 +33,7 @@ export default async function EditMyEventPage({ params }: { params: Promise<{ id
           rejectionReason={event.rejectionReason}
           initial={eventToFormValues(event)}
           categories={categories}
+          houses={houses}
           venues={venues}
           todayKey={todayKey()}
           userEmail={user.email}

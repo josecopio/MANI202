@@ -1,5 +1,8 @@
 // Plain string unions mirroring the Prisma enums, safe to import from client components.
-export type Audience = "RESIDENTS_ONLY" | "PUBLIC";
+/** HOUSE_ONLY = only residents of the house that hosts the event. */
+export type Audience = "RESIDENTS_ONLY" | "PUBLIC" | "HOUSE_ONLY";
+/** What the event does to its space for everybody else. */
+export type SpaceImpact = "NONE" | "LIMITED" | "CLOSED";
 export type Recurrence = "NONE" | "WEEKLY" | "MONTHLY";
 export type EventStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
 export type Role = "ORGANISER" | "ADMIN";

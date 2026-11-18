@@ -47,9 +47,10 @@ export async function saveEventAction(input: {
   // Organisers cannot silently unpublish a live event into a draft: they resubmit it for review.
   if (existing?.status === "PUBLISHED" && input.intent === "draft") return { ok: false, error: "forbidden" };
 
-  const [categories, venues] = await Promise.all([
+  const [categories, venues, houses] = await Promise.all([
     db.category.findMany({ select: { id: true } }),
-    db.venue.findMany({ select: { id: true, isOther: true } }),
+    db.venue.findMany({ select: { id: true, isOther: true, houseId: true } }),
+    db.house.findMany({ select: { id: true } }),
   ]);
 
   // "Save" on a draft keeps it a draft, so it stays lenient; everything that leads towards
@@ -59,12 +60,14 @@ export async function saveEventAction(input: {
     mode: lenient ? "draft" : "submit",
     allowPast: adminEdit,
     otherVenueIds: venues.filter((v) => v.isOther).map((v) => v.id),
+    venueHouse: Object.fromEntries(venues.map((v) => [v.id, v.houseId])),
   });
   if (!result.ok) return { ok: false, errors: result.errors };
 
   const errors: EventErrors = {};
   if (!categories.some((c) => c.id === result.data.categoryId)) errors.categoryId = "invalid";
   if (!venues.some((v) => v.id === result.data.venueId)) errors.venueId = "invalid";
+  if (result.data.houseId && !houses.some((h) => h.id === result.data.houseId)) errors.houseId = "invalid";
   if (Object.keys(errors).length) return { ok: false, errors };
 
   const status: EventStatus =
