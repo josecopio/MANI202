@@ -1,0 +1,45 @@
+// Rewrites the `provider` of the datasource block in prisma/schema.prisma from the
+// DATABASE_URL scheme, so the same schema serves SQLite (dev) and PostgreSQL (prod).
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+function readEnvFile(name) {
+  const file = resolve(root, name);
+  if (!existsSync(file)) return {};
+  const out = {};
+  for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+    if (!m) continue;
+    out[m[1]] = m[2].replace(/^(['"])(.*)\1$/, "$2");
+  }
+  return out;
+}
+
+const url =
+  process.env.DATABASE_URL ||
+  readEnvFile(".env.local").DATABASE_URL ||
+  readEnvFile(".env").DATABASE_URL ||
+  "";
+
+if (!url) {
+  console.log("[set-db-provider] DATABASE_URL not set; leaving schema provider unchanged.");
+  process.exit(0);
+}
+
+const provider = /^postgres(ql)?:\/\//i.test(url) ? "postgresql" : "sqlite";
+const schemaPath = resolve(root, "prisma/schema.prisma");
+const schema = readFileSync(schemaPath, "utf8");
+const next = schema.replace(
+  /(datasource\s+db\s*\{[^}]*?provider\s*=\s*)"[a-z]+"/,
+  `$1"${provider}"`,
+);
+
+if (next !== schema) {
+  writeFileSync(schemaPath, next);
+  console.log(`[set-db-provider] datasource provider set to "${provider}".`);
+} else {
+  console.log(`[set-db-provider] datasource provider already "${provider}".`);
+}

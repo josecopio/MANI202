@@ -1,0 +1,183 @@
+// CIUP Events Calendar - data model.
+//
+// The datasource provider below is rewritten automatically by
+// `scripts/set-db-provider.mjs` (run by postinstall / build / db:* scripts)
+// from the DATABASE_URL scheme: file:... -> sqlite, postgres(ql)://... -> postgresql.
+// Everything in this schema is portable across both (no scalar lists, no Json,
+// enums are supported by SQLite since Prisma 6.2).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ORGANISER
+  ADMIN
+}
+
+enum Audience {
+  RESIDENTS_ONLY
+  PUBLIC
+}
+
+enum Recurrence {
+  NONE
+  WEEKLY
+  MONTHLY
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  role          Role      @default(ORGANISER)
+  organisation  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  events    Event[]    @relation("EventCreator")
+  interests Interest[]
+}
+
+// ---- Auth.js (Prisma adapter) tables ----------------------------------------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---- Domain -----------------------------------------------------------------
+
+model Category {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  nameFr    String
+  nameEn    String
+  color     String // text colour, e.g. #6B2F8A
+  bgColor   String // light background colour, e.g. #F3ECF8
+  sortOrder Int     @default(0)
+  events    Event[]
+}
+
+model Venue {
+  id        String  @id @default(cuid())
+  nameFr    String
+  nameEn    String
+  isOther   Boolean @default(false) // when true, Event.customLocation is mandatory
+  sortOrder Int     @default(0)
+  events    Event[]
+}
+
+model Event {
+  id              String      @id @default(cuid())
+  title           String
+  description     String // max 400 characters (enforced by zod)
+  categoryId      String
+  startAt         DateTime
+  endAt           DateTime
+  venueId         String
+  customLocation  String?
+  audience        Audience    @default(RESIDENTS_ONLY)
+  organiserName   String
+  contactEmail    String
+  registrationUrl String?
+  imageUrl        String?
+  recurrence      Recurrence  @default(NONE)
+  recurrenceEnd   DateTime?
+  status          EventStatus @default(DRAFT)
+  rejectionReason String?
+  reviewedAt      DateTime?
+  isSample        Boolean     @default(false)
+  createdById     String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  category  Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  venue     Venue      @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  createdBy User       @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  interests Interest[]
+
+  @@index([status, startAt])
+  @@index([createdById])
+  @@index([categoryId])
+  @@index([venueId])
+}
+
+// "I'm interested": either a signed-in user or an anonymous device cookie.
+model Interest {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String?
+  deviceId  String?
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@unique([eventId, deviceId])
+  @@index([userId])
+  @@index([deviceId])
+}
+
+// Weekly email subscribers (double opt-in).
+model Subscriber {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  locale      String    @default("fr")
+  token       String    @unique @default(cuid())
+  confirmedAt DateTime?
+  /// Last confirmation email sent (cooldown against email-bombing a third party)
+  confirmationSentAt DateTime?
+  lastSentAt  DateTime?
+  createdAt   DateTime  @default(now())
+}

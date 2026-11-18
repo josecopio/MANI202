@@ -1,0 +1,48 @@
+{
+  "name": "ciup-events",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CIUP Events Calendar - houses and associations publish events, residents discover them.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "node scripts/set-db-provider.mjs && prisma generate && next build",
+    "start": "next start",
+    "postinstall": "node scripts/set-db-provider.mjs && prisma generate",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:push": "node scripts/set-db-provider.mjs && prisma db push",
+    "db:deploy": "node scripts/set-db-provider.mjs && prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:unseed": "tsx prisma/seed.ts --remove-samples",
+    "make-admin": "tsx scripts/make-admin.ts",
+    "db:reset": "node scripts/set-db-provider.mjs && prisma db push --force-reset && tsx prisma/seed.ts",
+    "vercel-build": "npm run db:deploy && npm run build"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.11.3",
+    "@date-fns/tz": "^1.5.0",
+    "@prisma/client": "6.19.3",
+    "@vercel/blob": "^2.0.0",
+    "date-fns": "^4.4.0",
+    "lucide-react": "^1.75.0",
+    "next": "16.4.6",
+    "next-auth": "5.0.0-beta.32",
+    "nodemailer": "^8.0.11",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^24.0.0",
+    "@types/nodemailer": "^7.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "prisma": "6.19.3",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^5.1.1"
+  }
+}
