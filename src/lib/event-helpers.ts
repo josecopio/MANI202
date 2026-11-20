@@ -13,6 +13,7 @@ export function eventToFormValues(e: {
   audience: "RESIDENTS_ONLY" | "PUBLIC" | "HOUSE_ONLY";
   spaceImpact: "NONE" | "LIMITED" | "CLOSED";
   restrictionNote: string | null;
+  accessPass: string | null;
   organiserName: string;
   contactEmail: string;
   registrationUrl: string | null;
@@ -33,6 +34,7 @@ export function eventToFormValues(e: {
     audience: e.audience,
     spaceImpact: e.spaceImpact,
     restrictionNote: e.restrictionNote ?? "",
+    accessPass: e.accessPass ?? "",
     organiserName: e.organiserName,
     contactEmail: e.contactEmail,
     registrationUrl: e.registrationUrl ?? "",

@@ -13,6 +13,8 @@ export type IcsEvent = {
   audienceLabel?: string;
   /** Extra lines for the description (access restrictions), shown before the organiser. */
   extraLines?: string[];
+  /** Adds a reminder this many minutes before the start (calendar apps that honour VALARM). */
+  alarmMinutesBefore?: number;
   url: string;
   recurrence: Recurrence;
   recurrenceEnd: Date | null;
@@ -133,6 +135,9 @@ function eventLines(e: IcsEvent, opts: IcsOptions, stamp: Date): string[] {
     // UNTIL is expressed in UTC: the very end of the last allowed day in Paris.
     const until = parseLocalDateTime(addDaysToKey(dayKeyOf(e.recurrenceEnd), 1), "00:00")!;
     lines.push(`RRULE:FREQ=${freq};UNTIL=${formatUtc(new Date(until.getTime() - 1000))}`);
+  }
+  if (e.alarmMinutesBefore) {
+    lines.push("BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${escapeText(e.title)}`, `TRIGGER:-PT${e.alarmMinutesBefore}M`, "END:VALARM");
   }
   lines.push("END:VEVENT");
   return lines;

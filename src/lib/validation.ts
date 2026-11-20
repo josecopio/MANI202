@@ -58,6 +58,7 @@ export type EventField =
   | "audience"
   | "spaceImpact"
   | "restrictionNote"
+  | "accessPass"
   | "organiserName"
   | "contactEmail"
   | "registrationUrl"
@@ -79,6 +80,7 @@ export type EventFormValues = {
   audience: "RESIDENTS_ONLY" | "PUBLIC" | "HOUSE_ONLY";
   spaceImpact: "NONE" | "LIMITED" | "CLOSED";
   restrictionNote: string;
+  accessPass: string;
   organiserName: string;
   contactEmail: string;
   registrationUrl: string;
@@ -99,6 +101,7 @@ export type EventData = {
   audience: "RESIDENTS_ONLY" | "PUBLIC" | "HOUSE_ONLY";
   spaceImpact: "NONE" | "LIMITED" | "CLOSED";
   restrictionNote: string | null;
+  accessPass: string | null;
   organiserName: string;
   contactEmail: string;
   registrationUrl: string | null;
@@ -137,6 +140,7 @@ const eventShape = z.object({
   audience: z.enum(["RESIDENTS_ONLY", "PUBLIC", "HOUSE_ONLY"], "invalid"),
   spaceImpact: z.enum(["NONE", "LIMITED", "CLOSED"], "invalid").default("NONE"),
   restrictionNote: s(2000),
+  accessPass: s(2000),
   organiserName: s(300),
   contactEmail: s(320),
   registrationUrl: s(1000),
@@ -192,6 +196,7 @@ export function validateEvent(input: unknown, options: ValidationOptions): Event
     description: raw.description.trim(),
     customLocation: raw.customLocation.trim(),
     restrictionNote: raw.restrictionNote.trim(),
+    accessPass: raw.accessPass.trim(),
     organiserName: raw.organiserName.trim(),
     contactEmail: raw.contactEmail.trim(),
     registrationUrl: raw.registrationUrl.trim(),
@@ -243,6 +248,7 @@ export function validateEvent(input: unknown, options: ValidationOptions): Event
   }
   if (v.audience === "HOUSE_ONLY" && v.houseId === HOUSE_NONE) fail("audience", "house_only_needs_house");
   if (v.restrictionNote.length > NOTE_MAX) fail("restrictionNote", "note_long");
+  if (v.accessPass.length > NOTE_MAX) fail("accessPass", "note_long");
   if (v.customLocation.length > 120) fail("customLocation", "custom_location_long");
   else if (submit && v.venueId && options.otherVenueIds?.includes(v.venueId) && !v.customLocation) {
     fail("customLocation", "custom_location_required");
@@ -293,6 +299,7 @@ export function validateEvent(input: unknown, options: ValidationOptions): Event
       audience: v.audience,
       spaceImpact: v.spaceImpact,
       restrictionNote: v.restrictionNote || null,
+      accessPass: v.accessPass || null,
       organiserName: v.organiserName,
       contactEmail: v.contactEmail,
       registrationUrl: v.registrationUrl || null,

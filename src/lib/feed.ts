@@ -5,13 +5,15 @@ import { eventUrl, getSiteDomain } from "./site";
 import { inScope, placeLabel, type CalendarScope } from "./queries";
 import { isEligible } from "./prefs-shared";
 import { restrictionLines } from "./restrictions";
+import { eventTexts } from "./event-text";
 import type { Locale } from "./types";
 
 type Row = Awaited<ReturnType<typeof loadRows>>[number];
 
 function loadRows(where: Record<string, unknown>) {
   return db.event.findMany({
-    where: { status: "PUBLISHED", ...where },
+    // Only bookings that restrict residents' access belong in the calendar.
+    where: { status: "PUBLISHED", spaceImpact: { not: "NONE" }, ...where },
     include: { venue: true, house: true, category: true },
     orderBy: { startAt: "asc" },
   });
@@ -20,11 +22,12 @@ function loadRows(where: Record<string, unknown>) {
 export function toIcsEvent(e: Row, locale: Locale): IcsEvent {
   const m = getMessagesFor(locale);
   const houseName = e.house ? (locale === "fr" ? e.house.nameFr : e.house.nameEn) : null;
+  const text = eventTexts(e, locale);
   return {
     id: e.id,
     // In a merged calendar the house is the first thing a resident wants to know.
-    title: houseName ? `[${houseName}] ${e.title}` : e.title,
-    description: e.description,
+    title: houseName ? `[${houseName}] ${text.title}` : text.title,
+    description: text.description,
     startAt: e.startAt,
     endAt: e.endAt,
     location: placeLabel(e.house, e.venue, e.customLocation, locale),
@@ -35,9 +38,11 @@ export function toIcsEvent(e: Row, locale: Locale): IcsEvent {
       audience: e.audience,
       houseName,
       spaceImpact: e.spaceImpact,
-      restrictionNote: e.restrictionNote,
+      restrictionNote: text.restrictionNote,
+      accessPass: text.accessPass,
     }),
     url: eventUrl(e.id),
+    alarmMinutesBefore: 60,
     recurrence: e.recurrence,
     recurrenceEnd: e.recurrenceEnd,
     updatedAt: e.updatedAt,

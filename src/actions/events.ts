@@ -14,7 +14,7 @@ export type SaveResult =
   | { ok: false; errors?: EventErrors; error?: "forbidden" | "not_found" | "generic" };
 
 function revalidateEvent(id?: string) {
-  revalidatePath("/");
+  revalidatePath("/calendar", "layout");
   revalidatePath("/my-events");
   revalidatePath("/admin");
   if (id) revalidatePath(`/events/${id}`);

@@ -157,6 +157,13 @@ model Event {
   audience        Audience    @default(RESIDENTS_ONLY)
   spaceImpact     SpaceImpact @default(NONE)
   restrictionNote String? // max 200 characters, e.g. "Grand salon réservé de 18h à 22h"
+  /// Pass residents need during the event (e.g. access bracelet and where to get it). Null = none.
+  accessPass      String?
+  /// English versions of the texts above (optional: the French text is shown when empty).
+  titleEn           String?
+  descriptionEn     String?
+  restrictionNoteEn String?
+  accessPassEn      String?
 
   organiserName   String
   contactEmail    String
@@ -218,4 +225,19 @@ model Subscriber {
   confirmationSentAt DateTime?
   lastSentAt         DateTime?
   createdAt          DateTime  @default(now())
+}
+
+/// A browser / device that accepted push notifications (no account needed).
+model PushSubscription {
+  id         String    @id @default(cuid())
+  /// Push service URL: unique per browser profile and secret (it is the device's address).
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  /// Comma-separated house slugs followed on that device. Empty = every house.
+  houseSlugs String    @default("")
+  locale     String    @default("fr")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSentAt DateTime?
 }

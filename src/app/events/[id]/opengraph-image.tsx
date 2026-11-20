@@ -4,6 +4,7 @@ import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { dayKeyOf, formatDayLong, formatTime } from "@/lib/dates";
 import { placeLabel } from "@/lib/queries";
+import { eventTexts } from "@/lib/event-text";
 import { getLocale } from "@/lib/i18n/server";
 
 export const alt = "Event";
@@ -23,7 +24,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const logoSvg = await readFile(path.join(process.cwd(), "public/brand/ciup-logo.svg"));
   const logoSrc = `data:image/svg+xml;base64,${logoSvg.toString("base64")}`;
 
-  const title = event?.title ?? "Cité internationale";
+  const title = event ? eventTexts(event, locale).title : "Cité internationale";
   const when = event ? `${formatDayLong(dayKeyOf(event.startAt), locale)} · ${formatTime(event.startAt, locale)}` : "";
   const where = event ? placeLabel(event.house, event.venue, event.customLocation, locale) : "";
   const category = event ? (locale === "fr" ? event.category.nameFr : event.category.nameEn) : "";

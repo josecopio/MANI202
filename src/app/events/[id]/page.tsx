@@ -2,22 +2,17 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarPlus, ExternalLink, Home, Mail, MapPin, Repeat, Users, CalendarClock } from "lucide-react";
+import { ArrowLeft, CalendarClock, DoorClosed, MapPin, Repeat, Ticket, TriangleAlert, Users } from "lucide-react";
 import { getI18n } from "@/lib/i18n/server";
 import { getCurrentUser, canManageEvent } from "@/lib/permissions";
-import { getDeviceId } from "@/lib/device";
-import { getPrefs } from "@/lib/prefs";
-import { isEligible } from "@/lib/prefs-shared";
-import { AccessDetails } from "@/components/events/AccessBadges";
-import { getEventWithRelations, getInterestedEventIds, placeLabel } from "@/lib/queries";
+import { impactLabel } from "@/lib/restrictions";
+import { eventTexts } from "@/lib/event-text";
+import { getEventWithRelations, placeLabel } from "@/lib/queries";
 import { dayKeyOf, formatDayLong, formatTime } from "@/lib/dates";
 import { expandOccurrences } from "@/lib/recurrence";
 import { eventUrl, getBaseUrl } from "@/lib/site";
-import { fmt } from "@/lib/utils";
-import { CategoryTag } from "@/components/ui/CategoryTag";
+import { cn, fmt } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { InterestButton } from "@/components/events/InterestButton";
-import { ShareButton } from "@/components/events/ShareButton";
 
 const load = cache(async (id: string) => getEventWithRelations(id));
 
@@ -36,24 +31,25 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!event) return { title: "404" };
 
   const when = `${formatDayLong(dayKeyOf(event.startAt), locale)}, ${formatTime(event.startAt, locale)}`;
-  const description = `${when} · ${placeLabel(event.house, event.venue, event.customLocation, locale)} — ${event.description}`.slice(0, 200);
+  const text = eventTexts(event, locale);
+  const description = `${when} · ${placeLabel(event.house, event.venue, event.customLocation, locale)} — ${text.description}`.slice(0, 200);
   const image = event.imageUrl ? [{ url: event.imageUrl.startsWith("/") ? `${getBaseUrl()}${event.imageUrl}` : event.imageUrl }] : undefined;
 
   return {
-    title: event.title,
+    title: text.title,
     description,
     robots: event.status === "PUBLISHED" ? undefined : { index: false },
     alternates: { canonical: eventUrl(event.id) },
     openGraph: {
       type: "website",
       url: eventUrl(event.id),
-      title: event.title,
+      title: text.title,
       description,
       locale: locale === "fr" ? "fr_FR" : "en_GB",
       // Without an uploaded image, Next adds the generated opengraph-image of this route.
       ...(image ? { images: image } : {}),
     },
-    twitter: { card: "summary_large_image", title: event.title, description },
+    twitter: { card: "summary_large_image", title: text.title, description },
   };
 }
 
@@ -63,13 +59,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const event = await loadVisible(id);
   if (!event) notFound();
 
-  const user = await getCurrentUser();
-  const interestedIds = await getInterestedEventIds({ userId: user?.id, deviceId: await getDeviceId() });
-  const prefs = await getPrefs();
-  const houseName = event.house ? (locale === "fr" ? event.house.nameFr : event.house.nameEn) : null;
-  const eligible = isEligible(event.audience, event.house?.slug ?? null, prefs.home);
   const published = event.status === "PUBLISHED";
-  const category = { name: locale === "fr" ? event.category.nameFr : event.category.nameEn, color: event.category.color, bgColor: event.category.bgColor };
+  const closed = event.spaceImpact === "CLOSED";
+  const text = eventTexts(event, locale);
 
   // For a series, show the next upcoming occurrence rather than the very first date.
   const now = new Date();
@@ -100,28 +92,14 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       ),
     },
     { icon: MapPin, label: t.detail.where, value: placeLabel(event.house, event.venue, event.customLocation, locale) },
-    {
-      icon: Home,
-      label: t.detail.house,
-      value: event.house ? (
-        <Link href={`/houses/${event.house.slug}`} className="text-accent underline underline-offset-2">{houseName}</Link>
-      ) : null,
-    },
     { icon: Users, label: t.detail.organiser, value: event.organiserName },
-    {
-      icon: Mail,
-      label: t.detail.contact,
-      value: event.contactEmail ? (
-        <a href={`mailto:${event.contactEmail}`} className="text-accent underline underline-offset-2">{event.contactEmail}</a>
-      ) : null,
-    },
   ].filter((f) => f.value);
 
   return (
     <article className="mx-auto max-w-4xl">
-      <Link href="/" className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-accent">
+      <Link href="/calendar" className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-accent">
         <ArrowLeft size={18} aria-hidden="true" />
-        {t.detail.allEvents}
+        {t.access.eyebrow}
       </Link>
 
       {!published && (
@@ -132,16 +110,24 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
       )}
       {event.isSample && <p className="mt-2 rounded-control bg-neutral-soft p-3 text-sm font-medium text-muted">{t.detail.sampleNotice}</p>}
 
-      <div className="card mt-4 overflow-hidden">
+      <div className="mt-4 overflow-hidden rounded-[32px] md:bg-surface">
         {event.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={event.imageUrl} alt="" className="max-h-80 w-full object-cover" />
         )}
-        <div className="p-5 sm:p-8">
-          <CategoryTag category={category} />
-          <h1 className="mt-3 text-3xl font-bold sm:text-4xl">{event.title}</h1>
+        <div className="py-2 md:p-8">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-sm font-semibold uppercase tracking-wide",
+              closed ? "bg-danger-soft text-danger" : "bg-warn-soft text-warn",
+            )}
+          >
+            {closed ? <DoorClosed size={16} aria-hidden="true" /> : <TriangleAlert size={16} aria-hidden="true" />}
+            {closed ? t.access.closed : t.access.limited}
+          </span>
+          <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">{text.title}</h1>
 
-          <dl className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          <dl className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-3">
             {facts.map(({ icon: Icon, label, value }) => (
               <div key={label}>
                 <dt className="flex items-center gap-2 text-sm font-semibold text-muted">
@@ -153,34 +139,34 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
             ))}
           </dl>
 
-          <div className="mt-6">
-            <AccessDetails
-              event={{ audience: event.audience, houseName, eligible, spaceImpact: event.spaceImpact }}
-              note={event.restrictionNote}
-            />
-          </div>
+          {/* What changes for residents */}
+          <section aria-labelledby="changes" className="mt-8 rounded-[24px] bg-bg p-5 sm:p-6">
+            <h2 id="changes" className="text-xl font-semibold">{t.access.whatChanges}</h2>
+            <p className="mt-2 text-[17px]">
+              <span className="font-semibold">{placeLabel(event.house, event.venue, event.customLocation, locale)}</span>
+              {" · "}
+              {impactLabel(t, event.spaceImpact)}
+            </p>
+            {text.restrictionNote && <p className="mt-2 text-[17px] leading-relaxed">{text.restrictionNote}</p>}
+            {text.accessPass && (
+              <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-brand bg-surface p-4">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent" aria-hidden="true">
+                  <Ticket size={20} />
+                </span>
+                <div>
+                  <p className="font-semibold">{t.access.passRequired}</p>
+                  <p className="mt-0.5 leading-relaxed">{text.accessPass}</p>
+                </div>
+              </div>
+            )}
+          </section>
 
-          <p className="mt-6 whitespace-pre-line text-lg leading-relaxed">{event.description}</p>
-
-          <div className="mt-8 flex flex-wrap items-start gap-2">
-            {published && <InterestButton eventId={event.id} interested={interestedIds.includes(event.id)} />}
-            {published && (
-              <a href={`/api/events/${event.id}/ics${next ? `?date=${dayKey}` : ""}`} download className="btn btn-secondary btn-sm">
-                <CalendarPlus size={16} aria-hidden="true" />
-                {t.card.addToCalendar}
-              </a>
-            )}
-            {published && event.recurrence !== "NONE" && (
-              <a href={`/api/events/${event.id}/ics`} download className="btn btn-ghost btn-sm">{t.detail.seriesDownload}</a>
-            )}
-            {event.registrationUrl && (
-              <a href={event.registrationUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">
-                <ExternalLink size={16} aria-hidden="true" />
-                {t.card.register}
-              </a>
-            )}
-            {published && <ShareButton title={event.title} />}
-          </div>
+          {text.description && (
+            <section aria-labelledby="about" className="mt-8">
+              <h2 id="about" className="text-xl font-semibold">{t.access.about}</h2>
+              <p className="mt-2 whitespace-pre-line text-[17px] leading-relaxed text-muted">{text.description}</p>
+            </section>
+          )}
         </div>
       </div>
     </article>

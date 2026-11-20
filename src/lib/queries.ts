@@ -1,9 +1,10 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "./db";
-import { dayKeyOf, monthGrid, rangeOfDayKeys, type MonthRef } from "./dates";
+import { addDaysToKey, dayKeyOf, monthGrid, rangeOfDayKeys, type MonthRef } from "./dates";
 import { expandOccurrences } from "./recurrence";
 import { normalizeText } from "./utils";
 import { isEligible } from "./prefs-shared";
+import { eventTexts } from "./event-text";
 import type { Audience, Locale, Recurrence, SpaceImpact } from "./types";
 
 // ---- Reference data ---------------------------------------------------------
@@ -213,4 +214,73 @@ export async function getEventWithRelations(id: string) {
     where: { id },
     include: { venue: true, house: true, category: true, createdBy: { select: { id: true, email: true, name: true } } },
   });
+}
+
+// ---- Access restrictions (next seven days) -------------------------------------
+
+export type RestrictionItem = {
+  key: string;
+  eventId: string;
+  dayKey: string;
+  startAt: string;
+  endAt: string;
+  title: string;
+  organiserName: string;
+  houseSlug: string | null;
+  houseName: string | null;
+  space: string;
+  spaceImpact: SpaceImpact;
+  restrictionNote: string | null;
+  accessPass: string | null;
+};
+
+/**
+ * Published bookings that restrict residents' access (space closed or limited), for the
+ * `days` days starting at `fromKey`. `houses` null means every house.
+ */
+export async function getRestrictions(opts: {
+  fromKey: string;
+  days: number;
+  houses: string[] | null;
+  locale: Locale;
+}): Promise<RestrictionItem[]> {
+  const lastKey = addDaysToKey(opts.fromKey, opts.days - 1);
+  const { start, end } = rangeOfDayKeys(opts.fromKey, lastKey);
+  const rows = await db.event.findMany({
+    where: {
+      status: "PUBLISHED",
+      spaceImpact: { not: "NONE" },
+      ...(opts.houses ? { house: { slug: { in: opts.houses } } } : {}),
+      OR: [
+        { recurrence: "NONE", startAt: { lt: end }, endAt: { gt: start } },
+        { recurrence: { not: "NONE" }, startAt: { lt: end }, OR: [{ recurrenceEnd: { gte: start } }, { recurrenceEnd: null }] },
+      ],
+    },
+    include: { venue: true, house: true },
+  });
+
+  const out: RestrictionItem[] = [];
+  for (const e of rows) {
+    const space = e.customLocation && e.venue.isOther ? e.customLocation : opts.locale === "fr" ? e.venue.nameFr : e.venue.nameEn;
+    const text = eventTexts(e, opts.locale);
+    for (const occ of expandOccurrences(e, start, end)) {
+      out.push({
+        key: `${e.id}@${occ.dayKey}`,
+        eventId: e.id,
+        dayKey: occ.dayKey,
+        startAt: occ.startAt.toISOString(),
+        endAt: occ.endAt.toISOString(),
+        title: text.title,
+        organiserName: e.organiserName,
+        houseSlug: e.house?.slug ?? null,
+        houseName: e.house ? (opts.locale === "fr" ? e.house.nameFr : e.house.nameEn) : null,
+        space,
+        spaceImpact: e.spaceImpact,
+        restrictionNote: text.restrictionNote,
+        accessPass: text.accessPass,
+      });
+    }
+  }
+  out.sort((a, b) => a.startAt.localeCompare(b.startAt) || a.title.localeCompare(b.title));
+  return out;
 }

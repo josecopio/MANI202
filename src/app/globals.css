@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #f4f5f8;
+  --color-bg: #f6f6f9;
   --color-surface: #ffffff;
   --color-line: #e3e5ec;
   /* Input borders, as specified. NOTE: 1.57:1 on white, below WCAG 1.4.11 (3:1) for form
@@ -23,23 +23,24 @@
   --color-neutral-soft: #eceef3;
   --color-footer: #1e2023;
 
-  --font-heading: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
 
   --radius-control: 12px;
-  --radius-card: 20px;
+  --radius-card: 28px;
   --radius-pill: 999px;
 }
 
 html {
-  background: var(--color-bg);
+  background: var(--color-surface);
   color: var(--color-ink);
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   min-height: 100dvh;
-  background: var(--color-bg);
+  background: var(--color-surface);
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;
@@ -49,7 +50,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-heading);
-  letter-spacing: -0.015em;
+  letter-spacing: -0.005em;
 }
 
 :focus-visible {
@@ -68,6 +69,16 @@ h3 {
 }
 
 @layer components {
+  /* Card surface: white on the grey desktop background, light grey on the white phone background. */
+  .panel {
+    background: var(--color-bg);
+  }
+  @media (min-width: 768px) {
+    .panel {
+      background: var(--color-surface);
+    }
+  }
+
   .page {
     margin-inline: auto;
     width: 100%;
@@ -226,5 +237,12 @@ h3 {
     font-weight: 600;
     line-height: 1.6;
     white-space: nowrap;
+  }
+}
+
+@media (min-width: 768px) {
+  html,
+  body {
+    background: var(--color-bg);
   }
 }

@@ -19,7 +19,7 @@ async function admin(): Promise<boolean> {
 }
 
 function refresh() {
-  revalidatePath("/");
+  revalidatePath("/calendar", "layout");
   revalidatePath("/admin");
   revalidatePath("/submit");
 }
@@ -153,7 +153,7 @@ export async function saveHouseAction(_prev: AdminResult | null, formData: FormD
     await db.house.create({ data: { ...parsed.data, slug } });
   }
   refresh();
-  revalidatePath("/houses");
+  revalidatePath("/calendar");
   return { ok: true };
 }
 
@@ -164,6 +164,6 @@ export async function deleteHouseAction(id: string): Promise<AdminResult> {
   if (used > 0) return { ok: false, error: "in_use" };
   await db.house.delete({ where: { id } }).catch(() => undefined);
   refresh();
-  revalidatePath("/houses");
+  revalidatePath("/calendar");
   return { ok: true };
 }

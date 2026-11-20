@@ -30,6 +30,7 @@ export default async function SubmitPage() {
     audience: "RESIDENTS_ONLY",
     spaceImpact: "NONE",
     restrictionNote: "",
+    accessPass: "",
     organiserName: user.organisation ?? "",
     contactEmail: user.email,
     registrationUrl: "",

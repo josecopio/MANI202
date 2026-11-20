@@ -36,7 +36,7 @@ type Props = {
 
 const FIELD_ORDER: EventField[] = [
   "title", "categoryId", "description", "date", "startTime", "endTime", "houseId", "venueId", "customLocation",
-  "audience", "restrictionNote",
+  "audience", "restrictionNote", "accessPass",
   "recurrenceEnd", "organiserName", "contactEmail", "registrationUrl", "imageUrl",
 ];
 
@@ -421,6 +421,9 @@ export function EventForm({ mode, eventId, initial, categories, houses, venues, 
               </p>
             </>
           )}
+        </Field>
+        <Field name="accessPass" label={t.submit.fieldPass} hint={t.submit.passHint} error={errors.accessPass ?? (values.accessPass.length > NOTE_MAX ? "note_long" : undefined)} optional>
+          {(p) => <input {...p} name="accessPass" className="input" value={values.accessPass} onChange={(e) => set("accessPass", e.target.value)} />}
         </Field>
       </section>
 

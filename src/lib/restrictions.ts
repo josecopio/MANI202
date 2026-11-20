@@ -7,6 +7,7 @@ export type AccessInfo = {
   houseName: string | null;
   spaceImpact: SpaceImpact;
   restrictionNote: string | null;
+  accessPass?: string | null;
 };
 
 /** True when the event comes with something a resident should know about (reserved or space affected). */
@@ -28,9 +29,10 @@ export function impactLabel(m: Messages, impact: SpaceImpact): string | null {
 
 /** Plain-text lines for calendar apps and e-mails. */
 export function restrictionLines(m: Messages, e: AccessInfo): string[] {
-  const lines = [`${m.restrictions.accessLabel} : ${audienceLabel(m, e)}`];
+  const lines: string[] = [];
   const impact = impactLabel(m, e.spaceImpact);
-  if (impact) lines.push(`${m.restrictions.spaceLabel} : ${impact}`);
+  if (impact) lines.push(`${m.restrictions.spaceLabel}${m.punct.colon}${impact}`);
   if (e.restrictionNote) lines.push(e.restrictionNote);
+  if (e.accessPass) lines.push(`${m.access.passRequired}${m.punct.colon}${e.accessPass}`);
   return lines;
 }

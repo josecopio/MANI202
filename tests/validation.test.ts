@@ -19,6 +19,7 @@ const valid: EventFormValues = {
   audience: "RESIDENTS_ONLY",
   spaceImpact: "NONE",
   restrictionNote: "",
+  accessPass: "",
   organiserName: "Maison du Japon",
   contactEmail: "events@example.org",
   registrationUrl: "",

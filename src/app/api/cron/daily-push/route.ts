@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { sendWeeklyDigest } from "@/lib/digest";
+import { sendDailyPush } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -14,9 +14,9 @@ function authorised(request: Request): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Triggered weekly by Vercel Cron (see vercel.json) or any scheduler sending the bearer secret. */
+/** Triggered every morning by Vercel Cron (see vercel.json) or any scheduler sending the bearer secret. */
 export async function GET(request: Request) {
   if (!authorised(request)) return new Response("Unauthorized", { status: 401 });
-  const result = await sendWeeklyDigest();
+  const result = await sendDailyPush();
   return Response.json(result);
 }

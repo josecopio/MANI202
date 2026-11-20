@@ -54,7 +54,8 @@ The seed creates fictional organisers ("… (exemple)", emails on the reserved `
 | `AUTH_TRUST_HOST` | outside Vercel | `true` when running behind your own proxy. |
 | `EMAIL_FROM` | yes in prod | Sender, e.g. `CIUP Événements <evenements@ciup.fr>`. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` | yes in prod | Outgoing mail. Without `SMTP_HOST`, mail is printed to the console in dev and **refused** in production (so magic links never end up in production logs). |
-| `CRON_SECRET` | for the digest | Bearer secret protecting `/api/cron/weekly-digest`. The route refuses to run if it is unset. |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | for push | Web push keys. Generate a pair with `npx web-push generate-vapid-keys`. Without them the notification button is disabled. |
+| `CRON_SECRET` | for the alerts | Bearer secret protecting `/api/cron/daily-push`. The route refuses to run if it is unset. |
 | `UPLOAD_DIR` | no | Where uploaded images are stored on disk (default `./uploads`). |
 | `BLOB_READ_WRITE_TOKEN` | on Vercel | Store uploads in Vercel Blob instead of the local disk (the Vercel filesystem is not persistent). |
 | `ADMIN_EMAILS` | no | Bootstrap admins (see above). |
@@ -71,7 +72,7 @@ The seed creates fictional organisers ("… (exemple)", emails on the reserved `
    node scripts/set-db-provider.mjs   # back to SQLite for local dev
    ```
 5. **Uploads:** create a Vercel Blob store and set `BLOB_READ_WRITE_TOKEN`.
-6. **Weekly email:** `vercel.json` schedules `/api/cron/weekly-digest` every Monday at 07:00 UTC (08:00 or 09:00 in Paris). Set `CRON_SECRET`; Vercel sends it automatically. Any other scheduler can call the route with `Authorization: Bearer $CRON_SECRET`.
+6. **Daily alerts:** `vercel.json` schedules `/api/cron/daily-push` every day at 05:00 UTC (06:00 or 07:00 in Paris). Devices that turned on notifications get a push message only on days when a restriction affects the houses they follow. Set `CRON_SECRET`; Vercel sends it automatically. Any other scheduler can call the route with `Authorization: Bearer $CRON_SECRET`.
 7. **Seed reference data once** (categories and venues; skip the sample events in production):
    ```bash
    DATABASE_URL=postgresql://… npm run db:seed && DATABASE_URL=postgresql://… npm run db:unseed
@@ -99,7 +100,7 @@ Any Node host works too: `npm ci && npm run db:deploy && npm run build && npm st
 - `GET /api/calendar.ics?category=sport,culture&lang=fr|en` — public feed of published events (from 30 days ago, plus running series). Recurring events use `RRULE`, times use `TZID=Europe/Paris` with a `VTIMEZONE`, lines are folded at 75 octets.
 - `GET /api/events/[id]/ics[?date=YYYY-MM-DD]` — download one event (or one occurrence of a series).
 - `POST /api/upload` — image upload (signed-in users; JPEG/PNG/WebP detected from the file bytes, 2 MB max).
-- `GET /api/cron/weekly-digest` — sends the weekly email (bearer secret).
+- `GET /api/cron/daily-push` — sends today's restriction push notifications (bearer secret).
 - Mutations are **server actions** (`src/actions/*`), each checking the session and role on the server.
 
 ### Event workflow
