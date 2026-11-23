@@ -11,3 +11,4 @@ prisma/*.db-journal
 .vercel
 coverage
 .DS_Store
+.env*.local

@@ -1,11 +1,12 @@
-# Render Blueprint: a free web service + a free PostgreSQL database, in demo mode for user tests.
-# Dashboard: New > Blueprint > pick this repository. See README, "Deploying on Render".
+# Render Blueprint: a free web service in demo mode for user tests, on the team's Supabase database.
+# Dashboard: New > Blueprint > pick this repository. See README, "Deploying on Render" and
+# "Shared database on Supabase".
 #
 # Free-plan facts this file is built around (render.com/docs/free):
 # - outbound SMTP is blocked, so DEMO_MODE shows sign-in links on screen instead of emailing them;
 # - the filesystem is wiped on every restart, so images are stored in the database;
 # - the service sleeps after 15 min without traffic (first request then takes ~1 min);
-# - the free database expires 30 days after creation.
+# - Render's free database expires 30 days after creation, so the data lives on Supabase instead.
 services:
   - type: web
     name: ciup-events
@@ -18,7 +19,14 @@ services:
     startCommand: npm run start:render
     healthCheckPath: /api/health
     envVars:
+      # Supabase "Session pooler" connection string (IPv4, port 5432), entered in the dashboard:
+      # ciup-events > Environment. Render never overwrites it (secret, sync: false).
       - key: DATABASE_URL
+        sync: false
+      # One-off move: on the first start against an EMPTY Supabase database, scripts/copy-db.ts
+      # copies everything from the old Render database. Remove this variable and the database
+      # block below once the move is confirmed.
+      - key: COPY_FROM_DATABASE_URL
         fromDatabase:
           name: ciup-events-db
           property: connectionString
@@ -42,6 +50,8 @@ services:
       - key: VAPID_SUBJECT
         value: mailto:events@example.org
 
+# The former database (expires 30 days after creation). Kept only as the source of the one-off
+# copy to Supabase; delete it (and COPY_FROM_DATABASE_URL above) once the move is confirmed.
 databases:
   - name: ciup-events-db
     plan: free

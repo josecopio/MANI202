@@ -63,28 +63,69 @@ The seed creates fictional organisers ("… (exemple)", emails on the reserved `
 | `DATABASE_PROVIDER` | no | `postgresql` or `sqlite`: forces the Prisma provider instead of reading it from `DATABASE_URL` (set on Render). |
 | `DEMO_MODE` | test sites only | `true`: no email is ever sent; the sign-in link is shown on screen to the browser that asked for it, and pages are `noindex`. **Anyone can then sign in with any address, including admin ones.** For user tests only. |
 | `SEED_SAMPLES` | no | `refresh`: makes the start-up seed on Render re-create the sample events (see below). |
+| `COPY_FROM_DATABASE_URL` | one-off | PostgreSQL database to copy everything from when the start-up on Render finds an empty database (used to move from Render's database to Supabase; see "Shared database on Supabase"). |
+| `ALLOW_DB_PUSH` | no | `1`: lets `db:push` / `db:reset` run against a (throwaway) PostgreSQL database. |
 
 ## Deploying on Render (test deployment for user tests)
 
-`render.yaml` is a Render Blueprint: one free web service and one free PostgreSQL database in Frankfurt, set up in **demo mode** for user tests.
+`render.yaml` is a Render Blueprint: one free web service in Frankfurt, set up in **demo mode** for user tests. Its data lives in the team's Supabase database (next section). The Blueprint still declares the former Render database, `ciup-events-db`, only as the source of the one-off copy to Supabase.
 
-1. On [dashboard.render.com](https://dashboard.render.com): **New > Blueprint**, connect GitHub and pick this repository. Render reads `render.yaml` and lists `ciup-events` (web service) and `ciup-events-db` (database). Click **Deploy Blueprint**.
+1. On [dashboard.render.com](https://dashboard.render.com): **New > Blueprint**, connect GitHub and pick this repository. Render reads `render.yaml`, lists `ciup-events` (web service) and asks for `DATABASE_URL`: paste the Supabase **Session pooler** connection string (see below). Click **Deploy Blueprint**.
 2. Wait for the first deploy (about 5 minutes). The site is then at `https://ciup-events-XXXX.onrender.com` (the address is shown on the service page).
 3. Every push to `main` redeploys automatically.
 
-What happens on each start: pending migrations are applied (`prisma migrate deploy`), the seed fills an **empty** database with categories, houses and sample events, then `next start` runs. A database that already has events is left alone, so testers' data survives restarts. To get fresh sample events (their dates are relative to the day they were created), set `SEED_SAMPLES=refresh` in the service's **Environment** tab, let it redeploy, then remove the variable.
+What happens on each start: pending migrations are applied (`prisma migrate deploy`), the one-off copy from the old Render database runs if the database is still empty (`scripts/copy-db.ts`, see below), the seed fills an **empty** database with categories, houses and sample events, then `next start` runs. A database that already has events is left alone, so testers' data survives restarts. To get fresh sample events (their dates are relative to the day they were created), set `SEED_SAMPLES=refresh` in the service's **Environment** tab, let it redeploy, then remove the variable.
 
 Signing in on the test site: there is no email. Testers enter any address and the "check your inbox" page shows a button with their sign-in link. Any address gets the organiser role; **`admin@demo.ciup.test`** gets the admin role (`ADMIN_EMAILS` in `render.yaml`).
 
 Free-plan limits, from [Render's docs](https://render.com/docs/free):
 
 - **The service sleeps after 15 minutes without visitors.** The next visit takes about a minute to wake it up. Open the site a few minutes before a test session.
-- **The free database expires 30 days after it is created.** Plan the tests within that window, or upgrade the database.
+- **Render's free database expires 30 days after it is created**, which is why the data is on Supabase.
 - **Outbound email (SMTP) is blocked**, which is why the Blueprint enables `DEMO_MODE`. To send real emails, move the service to a paid instance, set the `SMTP_*` variables and remove `DEMO_MODE`.
 - **The disk is wiped on every restart**, which is why images are stored in the database (`UPLOAD_STORAGE=database`).
 - **No cron jobs on the free plan**, so the daily push alerts are not scheduled. Push notifications themselves work once VAPID keys are added (run `npx web-push generate-vapid-keys` locally, then add `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in the service's Environment tab). A free external scheduler can call `/api/cron/daily-push` with `Authorization: Bearer <CRON_SECRET>`.
 
 Do not use this Blueprint for the real site: demo mode lets anyone sign in as anyone.
+
+## Shared database on Supabase
+
+The test site's data lives in a Supabase PostgreSQL project, **`ciup-events`** (Frankfurt), rather than on Render. It does not expire, everyone on the team can look at it, and a local copy of the app can connect to it.
+
+**Access.** Ask the project owner to invite you to the Supabase organisation (Supabase dashboard > Organization settings > Team > Invite). From there you can browse and edit every table (Table Editor), run SQL (SQL Editor), and copy the connection string (**Connect** > **Session pooler**). The dashboard never shows the database password. Get it from the owner privately, never through git, an issue or a group chat.
+
+**Connection string.** Always use the **Session pooler** (IPv4, port 5432). The "direct connection" host is IPv6-only on the free plan, which Render and most home networks cannot reach.
+
+```
+postgresql://postgres.<project-ref>:<password>@aws-<n>-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require&connection_limit=5
+```
+
+`connection_limit=5` keeps each running app well inside the free plan's connection pool, which the test site and everyone's local copies share.
+
+**Running your local copy on the shared data.** Put that string in `.env` as `DATABASE_URL`, run `npm install` (it switches Prisma to PostgreSQL and regenerates the client), then `npm run dev`. To go back to your own SQLite data, set `DATABASE_URL="file:./dev.db"` again and re-run `npm install`.
+
+- This is the test site's live data: what you create, change or delete locally, testers see. Sign-in links still appear in your terminal (no demo mode locally).
+- `npm install` rewrites the `provider` line of `prisma/schema.prisma` to `"postgresql"`. Leave that one-line change out of your commits.
+- `npm run db:push` and `npm run db:reset` refuse to run against PostgreSQL: they would bypass the migrations or wipe everyone's data. `npm run db:seed` re-creates and `npm run db:unseed` deletes the sample events for everyone, so agree on it first.
+
+**Changing the schema.** The shared database only changes through migrations, and Render applies them on every deploy. After editing `prisma/schema.prisma`, generate the migration against a throwaway PostgreSQL, never against Supabase (`prisma migrate dev` can reset the database it runs on). For example, with Docker:
+
+```bash
+docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=pg --name ciup-pg postgres:17
+export DATABASE_URL=postgresql://postgres:pg@localhost:5433/postgres
+node scripts/set-db-provider.mjs && npx prisma migrate dev --name <change>
+docker stop ciup-pg
+```
+
+Commit the new `prisma/migrations/<…>` folder and push to `main`; the next deploy migrates Supabase. SQLite users run `npm run db:push` after pulling it, as usual.
+
+**Moving the data from Render's database (one-off).**
+
+1. In Render: `ciup-events` > **Environment** > set `DATABASE_URL` to the Session pooler string > **Save, rebuild, and deploy**.
+2. On that start, the migrations create the tables in Supabase. Then `scripts/copy-db.ts` copies every row from the old database (`COPY_FROM_DATABASE_URL`, filled in by `render.yaml`): users, sessions (testers stay signed in), events, images and the rest. It only copies into an **empty** database, in a single transaction, so it either lands completely or not at all (the deploy then fails and the previous version keeps running). The deploy log shows `[copy-db] Copied into the new database: …`. Later starts skip it.
+3. Once the site runs on Supabase, delete `COPY_FROM_DATABASE_URL` and the `databases:` block from `render.yaml`, then delete `ciup-events-db` in the Render dashboard.
+
+**Free-plan limits (Supabase).** 500 MB of database per project (images are stored in it, which is plenty for tests), two free projects per account, and inactive free projects are paused after about a week. A paused project is restored from the dashboard.
 
 ## Deploying (Vercel + PostgreSQL)
 
@@ -179,7 +220,7 @@ Adding a UI string: add it to `src/lib/i18n/fr.ts`. TypeScript then requires the
 | `npm run dev` / `build` / `start` | Next.js |
 | `npm test` | Vitest: validation, ICS feed, recurrence and calendar grid |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run db:push` / `db:deploy` / `db:seed` / `db:unseed` / `db:reset` | database |
+| `npm run db:push` / `db:deploy` / `db:seed` / `db:unseed` / `db:reset` | database (`db:push` and `db:reset` are for the local SQLite file only) |
 | `npm run make-admin -- <email>` | grant admin |
 
 ## Before going live

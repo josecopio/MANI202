@@ -14,14 +14,14 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:push": "node scripts/set-db-provider.mjs && prisma db push",
+    "db:push": "node scripts/guard-local-db.mjs && node scripts/set-db-provider.mjs && prisma db push",
     "db:deploy": "node scripts/set-db-provider.mjs && prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:unseed": "tsx prisma/seed.ts --remove-samples",
     "make-admin": "tsx scripts/make-admin.ts",
-    "db:reset": "node scripts/set-db-provider.mjs && prisma db push --force-reset && tsx prisma/seed.ts",
+    "db:reset": "node scripts/guard-local-db.mjs && node scripts/set-db-provider.mjs && prisma db push --force-reset && tsx prisma/seed.ts",
     "vercel-build": "npm run db:deploy && npm run build",
-    "start:render": "npm run db:deploy && tsx prisma/seed.ts --if-empty && next start"
+    "start:render": "npm run db:deploy && tsx scripts/copy-db.ts && tsx prisma/seed.ts --if-empty && next start"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
