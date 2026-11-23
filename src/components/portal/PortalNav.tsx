@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell, CalendarDays, Compass, Contact, FilePlus2, House, LayoutGrid, ListTodo, Newspaper, QrCode,
+  Bell, CalendarDays, Compass, Contact, FilePlus2, House, LayoutGrid, ListTodo, LogOut, Newspaper, QrCode,
   Receipt, Search, Settings, ShieldCheck, SquareCheckBig, type LucideIcon,
 } from "lucide-react";
+import { signOutAction } from "@/actions/session";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -121,6 +122,17 @@ export function SidebarNav({ initials, organiser }: { initials: string; organise
                 </li>
               );
             })}
+            <li>
+              <form action={signOutAction}>
+                <button
+                  type="submit"
+                  className="flex min-h-11 w-full items-center gap-4 rounded-2xl px-4 text-left text-[15px] text-ink hover:bg-bg"
+                >
+                  <LogOut size={20} strokeWidth={1.5} aria-hidden="true" />
+                  {t.header.signOut}
+                </button>
+              </form>
+            </li>
           </ul>
         </>
       )}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, CircleHelp, Link2, LogOut, Search } from "lucide-react";
+import { Bell, CircleHelp, Link2, LogIn, LogOut, Search } from "lucide-react";
 import { getI18n } from "@/lib/i18n/server";
 import { signOutAction } from "@/actions/session";
 import { CIUP_ADDRESS, MOCK_RESIDENT } from "@/lib/portal-mock";
@@ -35,9 +35,9 @@ export async function RightPanel({ signedIn, home }: Props) {
               </button>
             </form>
           ) : (
-            <Link href="/" className={logoutClass}>
-              {t.portal.logout}
-              <LogOut size={20} aria-hidden="true" />
+            <Link href="/signin" className={logoutClass}>
+              {t.header.signIn}
+              <LogIn size={20} aria-hidden="true" />
             </Link>
           )}
         </div>

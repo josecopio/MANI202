@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Jost, Oswald } from "next/font/google";
-import { Bell, Compass, Contact, Search } from "lucide-react";
+import { Bell, Compass, Contact, LogOut, Search } from "lucide-react";
+import { signOutAction } from "@/actions/session";
 import "./globals.css";
 import { I18nProvider } from "@/lib/i18n/client";
 import { getI18n } from "@/lib/i18n/server";
@@ -75,7 +76,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <nav aria-label={t.portal.nav} className="-mr-2 flex items-center">
                 {[
                   { href: "/notifications", label: t.portal.notifications, icon: Bell, dot: true },
-                  { href: "/map", label: t.portal.map, icon: Compass },
+                  // Signed-in organisers get the sign-out button in place of the (placeholder) map:
+                  // a fifth icon does not fit next to the logo on a 390 px screen.
+                  ...(user ? [] : [{ href: "/map", label: t.portal.map, icon: Compass }]),
                   { href: "/directory", label: t.portal.directory, icon: Contact },
                   { href: "/search", label: t.portal.search, icon: Search },
                 ].map(({ href, label, icon: Icon, dot }) => (
@@ -84,6 +87,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     {dot && <span className="absolute right-2 top-2 size-2 rounded-full bg-[#e5484d]" aria-hidden="true" />}
                   </Link>
                 ))}
+                {user && (
+                  <form action={signOutAction}>
+                    <button
+                      type="submit"
+                      aria-label={t.header.signOut}
+                      title={t.header.signOut}
+                      className="inline-flex size-11 items-center justify-center text-ink"
+                    >
+                      <LogOut size={24} strokeWidth={1.4} aria-hidden="true" />
+                    </button>
+                  </form>
+                )}
               </nav>
             </header>
 
