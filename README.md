@@ -56,9 +56,35 @@ The seed creates fictional organisers ("… (exemple)", emails on the reserved `
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` | yes in prod | Outgoing mail. Without `SMTP_HOST`, mail is printed to the console in dev and **refused** in production (so magic links never end up in production logs). |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | for push | Web push keys. Generate a pair with `npx web-push generate-vapid-keys`. Without them the notification button is disabled. |
 | `CRON_SECRET` | for the alerts | Bearer secret protecting `/api/cron/daily-push`. The route refuses to run if it is unset. |
+| `UPLOAD_STORAGE` | no | `disk` (default) or `database` (images stored in the `Upload` table, for hosts without a persistent disk such as Render's free plan). |
 | `UPLOAD_DIR` | no | Where uploaded images are stored on disk (default `./uploads`). |
 | `BLOB_READ_WRITE_TOKEN` | on Vercel | Store uploads in Vercel Blob instead of the local disk (the Vercel filesystem is not persistent). |
 | `ADMIN_EMAILS` | no | Bootstrap admins (see above). |
+| `DATABASE_PROVIDER` | no | `postgresql` or `sqlite`: forces the Prisma provider instead of reading it from `DATABASE_URL` (set on Render). |
+| `DEMO_MODE` | test sites only | `true`: no email is ever sent; the sign-in link is shown on screen to the browser that asked for it, and pages are `noindex`. **Anyone can then sign in with any address, including admin ones.** For user tests only. |
+| `SEED_SAMPLES` | no | `refresh`: makes the start-up seed on Render re-create the sample events (see below). |
+
+## Deploying on Render (test deployment for user tests)
+
+`render.yaml` is a Render Blueprint: one free web service and one free PostgreSQL database in Frankfurt, set up in **demo mode** for user tests.
+
+1. On [dashboard.render.com](https://dashboard.render.com): **New > Blueprint**, connect GitHub and pick this repository. Render reads `render.yaml` and lists `ciup-events` (web service) and `ciup-events-db` (database). Click **Deploy Blueprint**.
+2. Wait for the first deploy (about 5 minutes). The site is then at `https://ciup-events-XXXX.onrender.com` (the address is shown on the service page).
+3. Every push to `main` redeploys automatically.
+
+What happens on each start: pending migrations are applied (`prisma migrate deploy`), the seed fills an **empty** database with categories, houses and sample events, then `next start` runs. A database that already has events is left alone, so testers' data survives restarts. To get fresh sample events (their dates are relative to the day they were created), set `SEED_SAMPLES=refresh` in the service's **Environment** tab, let it redeploy, then remove the variable.
+
+Signing in on the test site: there is no email. Testers enter any address and the "check your inbox" page shows a button with their sign-in link. Any address gets the organiser role; **`admin@demo.ciup.test`** gets the admin role (`ADMIN_EMAILS` in `render.yaml`).
+
+Free-plan limits, from [Render's docs](https://render.com/docs/free):
+
+- **The service sleeps after 15 minutes without visitors.** The next visit takes about a minute to wake it up. Open the site a few minutes before a test session.
+- **The free database expires 30 days after it is created.** Plan the tests within that window, or upgrade the database.
+- **Outbound email (SMTP) is blocked**, which is why the Blueprint enables `DEMO_MODE`. To send real emails, move the service to a paid instance, set the `SMTP_*` variables and remove `DEMO_MODE`.
+- **The disk is wiped on every restart**, which is why images are stored in the database (`UPLOAD_STORAGE=database`).
+- **No cron jobs on the free plan**, so the daily push alerts are not scheduled. Push notifications themselves work once VAPID keys are added (run `npx web-push generate-vapid-keys` locally, then add `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in the service's Environment tab). A free external scheduler can call `/api/cron/daily-push` with `Authorization: Bearer <CRON_SECRET>`.
+
+Do not use this Blueprint for the real site: demo mode lets anyone sign in as anyone.
 
 ## Deploying (Vercel + PostgreSQL)
 
