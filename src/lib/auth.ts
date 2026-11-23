@@ -4,6 +4,8 @@ import type { EmailConfig } from "next-auth/providers";
 import { db } from "./db";
 import { sendMail, EMAIL_FROM } from "./email";
 import { magicLinkEmail } from "./email-templates";
+import { cookies } from "next/headers";
+import { DEMO_LINK_COOKIE, isDemoMode } from "./demo";
 
 /**
  * Email magic-link provider. The link is mailed through our own mailer (SMTP in
@@ -17,6 +19,20 @@ const magicLink: EmailConfig = {
   maxAge: 24 * 60 * 60,
   options: {},
   async sendVerificationRequest({ identifier, url }) {
+    if (isDemoMode()) {
+      // No email in demo mode: the "check your inbox" page shows this link to the same browser.
+      try {
+        (await cookies()).set(DEMO_LINK_COOKIE, url, {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: url.startsWith("https:"),
+          path: "/signin",
+          maxAge: 10 * 60,
+        });
+      } catch (error) {
+        console.error("[demo] could not store the sign-in link", error);
+      }
+    }
     await sendMail(magicLinkEmail(identifier, url));
   },
 };

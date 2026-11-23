@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/permissions";
 import { getPrefs } from "@/lib/prefs";
 import { getHouseBySlug } from "@/lib/houses";
 import { getBaseUrl } from "@/lib/site";
+import { isDemoMode } from "@/lib/demo";
 import { MOCK_RESIDENT } from "@/lib/portal-mock";
 import { PortalLogo } from "@/components/portal/PortalLogo";
 import { HiddenOn, MobileTabBar, SidebarNav } from "@/components/portal/PortalNav";
@@ -27,6 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t.meta.description,
     openGraph: { siteName: t.meta.siteName, type: "website" },
     alternates: { types: { "text/calendar": "/api/calendar.ics" } },
+    ...(isDemoMode() ? { robots: { index: false, follow: false } } : {}),
   };
 }
 

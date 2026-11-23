@@ -24,12 +24,19 @@ const url =
   readEnvFile(".env").DATABASE_URL ||
   "";
 
-if (!url) {
+// DATABASE_PROVIDER wins when set (e.g. on Render, so the build never depends on the
+// database URL being visible at build time); otherwise the URL scheme decides.
+const forced = (process.env.DATABASE_PROVIDER || "").toLowerCase();
+if (forced && forced !== "postgresql" && forced !== "sqlite") {
+  console.error(`[set-db-provider] DATABASE_PROVIDER must be "postgresql" or "sqlite", got "${forced}".`);
+  process.exit(1);
+}
+if (!url && !forced) {
   console.log("[set-db-provider] DATABASE_URL not set; leaving schema provider unchanged.");
   process.exit(0);
 }
 
-const provider = /^postgres(ql)?:\/\//i.test(url) ? "postgresql" : "sqlite";
+const provider = forced || (/^postgres(ql)?:\/\//i.test(url) ? "postgresql" : "sqlite");
 const schemaPath = resolve(root, "prisma/schema.prisma");
 const schema = readFileSync(schemaPath, "utf8");
 const next = schema.replace(

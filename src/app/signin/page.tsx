@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getI18n } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/permissions";
 import { SignInForm } from "@/components/forms/SignInForm";
+import { isDemoMode } from "@/lib/demo";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -24,6 +25,9 @@ export default async function SignInPage({
       <div className="card p-6 sm:p-8">
         <h1 className="text-2xl font-bold">{t.signin.title}</h1>
         <p className="mt-2 text-muted">{t.signin.intro}</p>
+        {isDemoMode() && (
+          <p className="mt-4 rounded-control bg-warn-soft p-4 text-sm font-medium text-warn">{t.signin.demoNotice}</p>
+        )}
         {sp.error && (
           <div role="alert" className="mt-4 rounded-control bg-danger-soft p-4 text-danger">
             <p className="font-semibold">{t.signin.errorTitle}</p>

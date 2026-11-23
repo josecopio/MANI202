@@ -146,6 +146,16 @@ async function main() {
       spaceIds[`${h.slug}/${fr}`] = venue.id;
     }
   }
+  // --if-empty (used when the server starts on Render): reference data only, unless the
+  // database has no events yet. SEED_SAMPLES=refresh forces a full re-seed of the samples.
+  if (process.argv.includes("--if-empty") && process.env.SEED_SAMPLES !== "refresh") {
+    const events = await db.event.count();
+    if (events > 0) {
+      console.log(`Seed skipped: the database already has ${events} event(s). Set SEED_SAMPLES=refresh to re-create the samples.`);
+      return;
+    }
+  }
+
   const other = (await db.venue.findFirst({ where: { isOther: true, houseId: null } })) ?? (await db.venue.create({ data: OTHER_SPACE }));
   const categories = Object.fromEntries((await db.category.findMany()).map((c) => [c.slug, c.id]));
   const spaceOf = (house: string, space: string) => (space === "Autre" ? other.id : spaceIds[`${house}/${space}`]);

@@ -1,0 +1,51 @@
+# Render Blueprint: a free web service + a free PostgreSQL database, in demo mode for user tests.
+# Dashboard: New > Blueprint > pick this repository. See README, "Deploying on Render".
+#
+# Free-plan facts this file is built around (render.com/docs/free):
+# - outbound SMTP is blocked, so DEMO_MODE shows sign-in links on screen instead of emailing them;
+# - the filesystem is wiped on every restart, so images are stored in the database;
+# - the service sleeps after 15 min without traffic (first request then takes ~1 min);
+# - the free database expires 30 days after creation.
+services:
+  - type: web
+    name: ciup-events
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --include=dev && npm run build
+    # Migrations run at start (pre-deploy commands are not available on free instances), then
+    # the seed fills an EMPTY database only, so testers' data survives restarts.
+    startCommand: npm run start:render
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ciup-events-db
+          property: connectionString
+      - key: DATABASE_PROVIDER
+        value: postgresql
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: AUTH_TRUST_HOST
+        value: "true"
+      - key: DEMO_MODE
+        value: "true"
+      - key: UPLOAD_STORAGE
+        value: database
+      # In demo mode anyone can sign in with this address to test the admin role.
+      - key: ADMIN_EMAILS
+        value: admin@demo.ciup.test
+      - key: EMAIL_FROM
+        value: CIUP Events <events@example.org>
+      - key: VAPID_SUBJECT
+        value: mailto:events@example.org
+
+databases:
+  - name: ciup-events-db
+    plan: free
+    region: frankfurt
+    databaseName: ciup_events
+    user: ciup
+    ipAllowList: [] # internal connections only (the web service); no access from the internet

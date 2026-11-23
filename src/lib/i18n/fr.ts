@@ -161,6 +161,12 @@ export const fr = {
     checkBody: "Nous venons de vous envoyer un lien de connexion. Il est valable 24 heures.",
     checkSpam: "Rien reçu ? Regardez dans vos courriers indésirables.",
     emailInvalid: "Saisissez une adresse e-mail valide.",
+    demoNotice:
+      "Version de démonstration : aucun e-mail n’est envoyé. Saisissez n’importe quelle adresse, le lien de connexion s’affichera à l’écran.",
+    demoLinkTitle: "Version de démonstration",
+    demoLinkBody: "Aucun e-mail n’est envoyé. Voici le lien que vous auriez reçu :",
+    demoLinkButton: "Ouvrir mon lien de connexion",
+    demoLinkMissing: "Le lien a expiré ou a été ouvert dans un autre navigateur. Recommencez la connexion.",
   },
   submit: {
     title: "Proposer un événement",

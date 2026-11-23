@@ -163,6 +163,11 @@ export const en: Messages = {
     checkBody: "We just sent you a sign-in link. It is valid for 24 hours.",
     checkSpam: "Nothing there? Check your spam folder.",
     emailInvalid: "Enter a valid email address.",
+    demoNotice: "Demo version: no email is sent. Enter any address and the sign-in link will appear on screen.",
+    demoLinkTitle: "Demo version",
+    demoLinkBody: "No email is sent. Here is the link you would have received:",
+    demoLinkButton: "Open my sign-in link",
+    demoLinkMissing: "The link has expired or was opened in another browser. Please sign in again.",
   },
   submit: {
     title: "Submit an event",

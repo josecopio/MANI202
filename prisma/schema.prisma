@@ -241,3 +241,13 @@ model PushSubscription {
   updatedAt  DateTime  @updatedAt
   lastSentAt DateTime?
 }
+
+// Uploaded event images, when UPLOAD_STORAGE=database (hosts without a persistent disk,
+// e.g. Render free instances). The id is the public file name: <uuid>.<ext>.
+model Upload {
+  id        String   @id
+  mime      String
+  data      Bytes
+  size      Int
+  createdAt DateTime @default(now())
+}

@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import { isDemoMode } from "./demo";
 
 export type Mail = { to: string; subject: string; text: string; html: string };
 
@@ -25,13 +26,13 @@ export const EMAIL_FROM = process.env.EMAIL_FROM || "CIUP Events <events@example
 export async function sendMail(mail: Mail): Promise<void> {
   const t = getTransporter();
   if (!t) {
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !isDemoMode()) {
       throw new Error("SMTP is not configured (set SMTP_HOST, SMTP_USER, SMTP_PASS).");
     }
     console.log(
       [
         "",
-        "──────────── EMAIL (dev: not sent, SMTP_HOST is empty) ────────────",
+        `──────────── EMAIL (${isDemoMode() ? "demo mode" : "dev"}: not sent, SMTP_HOST is empty) ────────────`,
         `To:      ${mail.to}`,
         `Subject: ${mail.subject}`,
         "",
