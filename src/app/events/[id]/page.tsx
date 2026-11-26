@@ -133,7 +133,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
           </span>
           <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">{text.title}</h1>
 
-          <dl className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-3">
+          <dl className="mt-6 grid gap-x-8 gap-y-4 @2xl:grid-cols-3">
             {facts.map(({ icon: Icon, label, value }) => (
               <div key={label}>
                 <dt className="flex items-center gap-2 text-sm font-semibold text-muted">

@@ -106,7 +106,7 @@ export function EntranceMap({ resolved, houseName, locale, t }: { resolved: Reso
         </svg>
       </div>
 
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+      <ul className="mt-3 grid gap-2 @3xl:grid-cols-2">
         {[...open, ...closed].map((d) => (
           <li key={d.id} className="flex items-center gap-2.5 rounded-xl bg-surface px-3 py-2">
             <span
@@ -116,8 +116,8 @@ export function EntranceMap({ resolved, houseName, locale, t }: { resolved: Reso
             >
               {d.open ? <Check size={16} strokeWidth={3} /> : <X size={16} strokeWidth={3} />}
             </span>
-            <span className="font-medium">{tr(d.label, locale)}</span>
-            <span className="ml-auto text-sm font-semibold" style={{ color: d.open ? OPEN : CLOSED }}>
+            <span className="min-w-0 font-medium leading-snug">{tr(d.label, locale)}</span>
+            <span className="ml-auto shrink-0 pl-2 text-sm font-semibold" style={{ color: d.open ? OPEN : CLOSED }}>
               {d.open ? t.demo.doorOpen : t.demo.doorClosed}
             </span>
           </li>

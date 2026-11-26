@@ -75,7 +75,7 @@ export default async function CalendarPage() {
 
       {/* What is shown + edit */}
       <div className="flex flex-wrap items-center gap-3 md:mt-8">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-60">
           <h2 className="text-xl font-semibold sm:text-2xl">{t.access.weekLabel}</h2>
           <p className="mt-1 text-muted">{countLabel}</p>
         </div>
@@ -106,23 +106,23 @@ export default async function CalendarPage() {
       </div>
 
       {/* Seven days */}
-      <ol className="mt-6 grid gap-3 @4xl:grid-cols-7 @4xl:gap-2">
+      <ol className="mt-6 grid gap-3 @2xl:grid-cols-2 @5xl:grid-cols-7 @5xl:gap-2">
         {days.map((key, i) => {
           const list = byDay.get(key) ?? [];
           return (
             <li
               key={key}
               className={cn(
-                "panel flex flex-col rounded-[24px] p-3 @4xl:min-h-[420px]",
+                "panel flex min-w-0 flex-col rounded-[24px] p-3 @5xl:min-h-[420px]",
                 i === 0 && "ring-2 ring-brand",
               )}
             >
-              <h3 className="flex items-baseline justify-between gap-2 px-1 @4xl:flex-col @4xl:items-start @4xl:gap-0">
+              <h3 className="flex items-baseline justify-between gap-2 px-1 @5xl:flex-col @5xl:items-start @5xl:gap-0">
                 <span className={cn("text-base font-semibold capitalize", i === 0 && "text-accent")}>{dayName(key, i)}</span>
                 <span className="text-sm text-muted">{dayNum.format(noon(key)).replace(/\.$/, "")}</span>
               </h3>
               {list.length === 0 ? (
-                <p className="mt-2 flex items-center gap-1.5 px-1 text-sm text-muted @4xl:mt-3">
+                <p className="mt-2 flex items-center gap-1.5 px-1 text-sm text-muted @5xl:mt-3">
                   <CircleCheck size={16} className="shrink-0 text-brand-strong" aria-hidden="true" />
                   {t.access.noRestriction}
                 </p>
@@ -149,7 +149,7 @@ export default async function CalendarPage() {
         <Link
           href={`/events/${e.eventId}`}
           className={cn(
-            "block rounded-2xl border-l-4 p-2.5 text-ink no-underline transition-colors hover:brightness-[0.98]",
+            "block break-words rounded-2xl border-l-4 p-2.5 text-ink no-underline transition-colors hover:brightness-[0.98]",
             closed ? "border-danger bg-danger-soft" : "border-[#d9a400] bg-warn-soft",
           )}
         >
@@ -168,8 +168,8 @@ export default async function CalendarPage() {
           )}
           <span className="block text-sm leading-snug text-muted">{e.space}</span>
           {e.accessPass && (
-            <span className="mt-1.5 inline-flex items-center gap-1 whitespace-nowrap rounded-pill bg-danger px-2 py-0.5 text-xs font-semibold text-white">
-              <Ticket size={12} aria-hidden="true" />
+            <span className="mt-1.5 flex w-fit max-w-full items-start gap-1 rounded-xl bg-danger px-2 py-0.5 text-xs font-semibold leading-snug text-white">
+              <Ticket size={12} className="mt-[3px] shrink-0" aria-hidden="true" />
               {t.access.passRequired}
             </span>
           )}
