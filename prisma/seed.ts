@@ -36,10 +36,13 @@ const HOUSES: HouseSeed[] = [
   { slug: "maroc", nameFr: "Maison du Maroc", nameEn: "Maison du Maroc", isResidence: true, spaces: COMMON },
   { slug: "neerlandais", nameFr: "Collège néerlandais", nameEn: "Collège néerlandais", isResidence: true, spaces: COMMON },
   { slug: "maison-internationale", nameFr: "Maison internationale", nameEn: "Maison internationale", isResidence: false, spaces: [["Grand salon", "Grand salon"], ["Auditorium", "Auditorium"], ["Café", "Café"]] },
-  { slug: "centre-sportif", nameFr: "Centre sportif", nameEn: "Sports centre", isResidence: false, spaces: [["Gymnase", "Sports hall"], ["Terrains extérieurs", "Outdoor courts"]] },
   { slug: "bibliotheque", nameFr: "Bibliothèque", nameEn: "Library", isResidence: false, spaces: [["Salle de lecture", "Reading room"]] },
-  { slug: "parc", nameFr: "Parc", nameEn: "Park", isResidence: false, spaces: [["Pelouse centrale", "Main lawn"]] },
+  { slug: "restaurant-crous", nameFr: "Restaurant Crous", nameEn: "Crous Restaurant", isResidence: false, spaces: [["Salle de restaurant", "Dining hall"], ["Cafétéria", "Cafeteria"]] },
+  { slug: "piscine", nameFr: "Piscine", nameEn: "Swimming Pool", isResidence: false, spaces: [["Bassin", "Pool"], ["Vestiaires", "Changing rooms"]] },
+  { slug: "salle-de-musculation", nameFr: "Salle de musculation", nameEn: "Gym", isResidence: false, spaces: [["Plateau de musculation", "Weights area"], ["Salle de cardio", "Cardio room"]] },
 ];
+// Sites dropped from the list: removed from the database by the seed (with their sample events).
+const RETIRED_HOUSES = ["centre-sportif", "parc"];
 // Generic space usable in any house; the organiser types the exact place.
 const OTHER_SPACE = { nameFr: "Autre", nameEn: "Other", isOther: true, sortOrder: 99 };
 
@@ -72,47 +75,22 @@ type Seed = {
   custom?: string;
 };
 
+// A few examples, one per kind of situation (closed / limited, pass, weekly series, shared sites).
 const PUBLISHED: Seed[] = [
   { org: "horizon", days: 0, start: "08:00", end: "18:30", cat: "talks", house: "maison-internationale", space: "Auditorium", impact: "CLOSED", title: "Colloque international de santé publique", desc: "Deux journées de conférences et d’ateliers réunissant chercheurs, médecins et décideurs autour de la prévention en santé publique. Environ 400 participants sont attendus.", pass: "Bracelet vert « Maison internationale », à retirer à l’accueil sur présentation de votre carte de résident.", note: "Auditorium et foyer fermés aux résidents de 7h30 à 19h. Le café reste accessible par l’entrée latérale." },
   { org: "alteris", days: 0, start: "14:00", end: "19:00", cat: "workshops", house: "japon", space: "Salon commun", impact: "CLOSED", title: "Séminaire de direction", desc: "Séminaire stratégique annuel de l’équipe de direction d’une entreprise privée, avec ateliers et déjeuner sur place.", note: "Salon commun privatisé. Accès aux étages par l’entrée arrière." },
-  { org: "nova", days: 1, start: "09:00", end: "17:00", cat: "community", house: "centre-sportif", space: "Gymnase", impact: "CLOSED", title: "Salon de recrutement", desc: "Salon de l’emploi pour jeunes diplômés : une trentaine d’entreprises présentent leurs offres de stages et d’emplois.", pass: "Bracelet orange « Centre sportif » pour accéder aux vestiaires, à retirer à l’accueil du centre.", note: "Gymnase fermé toute la journée (montage dès 7h). Les cours de sport du jour sont annulés." },
-  { org: "nova", days: 1, start: "18:00", end: "21:00", cat: "community", house: "etats-unis", space: "Salon commun", impact: "LIMITED", title: "Réception de partenaires", desc: "Réception privée organisée par une agence événementielle pour ses clients et partenaires.", pass: "Badge résident à présenter à l’entrée ; les invités extérieurs passent par un contrôle de sécurité.", note: "Hall d’entrée filtré par un service de sécurité : présentez votre carte de résident." },
-  { org: "europa", days: 2, start: "09:00", end: "13:00", cat: "talks", house: "maison-internationale", space: "Grand salon", impact: "CLOSED", title: "Assemblée générale", desc: "Assemblée générale annuelle d’un réseau d’universités européennes : bilan de l’année et vote des projets.", note: "Grand salon indisponible. Les salles de travail du 1er étage restent ouvertes." },
-  { org: "lumen", days: 2, start: "10:00", end: "16:00", cat: "culture", house: "bibliotheque", space: "Salle de lecture", impact: "LIMITED", title: "Tournage d’un documentaire", desc: "Tournage d’un documentaire sur l’histoire de la Cité internationale, avec interviews dans la salle de lecture.", note: "La moitié de la salle de lecture est fermée ; silence demandé pendant les prises." },
-  { org: "nova", days: 3, start: "08:00", end: "20:00", cat: "community", house: "parc", space: "Pelouse centrale", impact: "LIMITED", title: "Village d’exposants", desc: "Village de stands en plein air pour un salon professionnel sur la ville durable.", note: "Pelouse centrale clôturée ; cheminement piéton dévié côté boulevard Jourdan." },
-  { org: "capavenir", days: 3, start: "13:00", end: "18:00", cat: "workshops", house: "inde", space: "Salon commun", impact: "CLOSED", title: "Session de formation professionnelle", desc: "Formation continue pour adultes sur la gestion de projet, organisée par un institut privé.", note: "Salon commun réservé. La cuisine collective reste accessible." },
-  { org: "alteris", days: 4, start: "11:00", end: "15:00", cat: "community", house: "japon", space: "Jardin", impact: "LIMITED", title: "Cocktail déjeunatoire", desc: "Cocktail de clôture d’un séminaire d’entreprise, servi dans le jardin.", note: "Jardin partiellement privatisé de 10h à 16h." },
-  { org: "horizon", days: 4, start: "18:00", end: "22:30", cat: "culture", house: "maison-internationale", space: "Auditorium", impact: "CLOSED", title: "Gala de remise de prix", desc: "Soirée de gala d’une fondation : remise de prix à des projets de recherche, suivie d’un dîner.", pass: "Bracelet vert « Maison internationale » obligatoire après 18h pour traverser le hall.", note: "Auditorium et parvis fermés de 16h à 23h. Accès résidents par la porte nord." },
-  { org: "nova", days: 5, start: "09:00", end: "18:00", cat: "sport", house: "centre-sportif", space: "Terrains extérieurs", impact: "CLOSED", title: "Tournoi inter-entreprises", desc: "Tournoi sportif amical entre salariés de plusieurs entreprises (football à cinq et basket).", note: "Terrains extérieurs fermés aux résidents toute la journée." },
-  { org: "europa", days: 5, start: "10:00", end: "17:00", cat: "talks", house: "franco-britannique", space: "Salon commun", impact: "CLOSED", title: "Journée d’étude", desc: "Journée d’étude universitaire sur les migrations étudiantes en Europe, avec tables rondes.", note: "Salon commun fermé ; bruit possible dans le hall aux pauses." },
-  { org: "alteris", days: 6, start: "09:00", end: "12:00", cat: "workshops", house: "etats-unis", space: "Salon commun", impact: "LIMITED", title: "Conseil d’administration", desc: "Réunion trimestrielle du conseil d’administration d’une entreprise privée.", note: "Une partie du salon est réservée ; merci de limiter le bruit." },
-  { org: "capavenir", days: 6, start: "08:00", end: "11:00", cat: "community", house: "maison-internationale", space: "Café", impact: "CLOSED", title: "Petit-déjeuner professionnel", desc: "Petit-déjeuner de réseautage pour entrepreneurs du sud de Paris.", note: "Café fermé aux résidents jusqu’à 11h." },
-  { org: "capavenir", days: 8, start: "09:00", end: "18:00", cat: "talks", house: "japon", space: "Salon commun", impact: "CLOSED", title: "Conférence annuelle", desc: "Conférence annuelle d’un institut de formation : interventions, tables rondes et cocktail.", pass: "Bracelet bleu « Maison du Japon » pour accéder aux étages, à retirer à l’accueil de la maison.", note: "Salon commun et hall fermés de 8h à 18h30." },
-  { org: "horizon", days: 9, start: "18:00", end: "20:00", cat: "talks", house: "maison-internationale", space: "Auditorium", impact: "CLOSED", title: "Cycle de conférences santé", desc: "Cycle hebdomadaire de conférences pour professionnels de santé, chaque mardi soir.", note: "Auditorium indisponible de 17h à 20h30.", recurrence: "WEEKLY", weeks: 6 },
-  { org: "lumen", days: 11, start: "07:00", end: "19:00", cat: "culture", house: "maroc", space: "Jardin", impact: "CLOSED", title: "Tournage d’une publicité", desc: "Tournage d’un spot publicitaire dans le jardin de la maison.", note: "Jardin fermé, véhicules techniques devant la maison." },
-  { org: "nova", days: 13, start: "10:00", end: "18:00", cat: "community", house: "centre-sportif", space: "Gymnase", impact: "LIMITED", title: "Salon des associations professionnelles", desc: "Salon réunissant des associations professionnelles du secteur de l’éducation.", note: "Seule la moitié du gymnase est utilisable." },
+  { org: "capavenir", days: 2, start: "12:00", end: "14:30", cat: "community", house: "restaurant-crous", space: "Salle de restaurant", impact: "LIMITED", title: "Déjeuner de séminaire", desc: "Déjeuner assis pour les 120 participants d’un séminaire de formation.", note: "La moitié de la salle est réservée de 11h30 à 14h30 ; le service aux résidents continue, prévoyez plus d’attente." },
+  { org: "europa", days: 3, start: "19:00", end: "21:00", cat: "sport", house: "piscine", space: "Bassin", impact: "LIMITED", title: "Entraînement d’un club de natation", desc: "Entraînement hebdomadaire d’un club de natation extérieur, chaque semaine le même soir.", note: "Quatre lignes d’eau sur six réservées au club ; deux lignes restent ouvertes aux résidents.", recurrence: "WEEKLY", weeks: 6 },
+  { org: "nova", days: 5, start: "07:00", end: "12:00", cat: "sport", house: "salle-de-musculation", space: "Plateau de musculation", impact: "CLOSED", title: "Tournage d’une vidéo de fitness", desc: "Tournage d’une vidéo promotionnelle pour une marque d’équipement sportif.", pass: "Bracelet jaune « Salle de musculation » pour accéder à la salle de cardio, à retirer à l’accueil.", note: "Plateau de musculation fermé jusqu’à midi. La salle de cardio reste ouverte." },
 ];
 
 /** English versions of the sample texts, keyed by the French title. */
 const EN: Record<string, { title: string; desc: string; note: string; pass?: string }> = {
   "Colloque international de santé publique": { title: "International public health conference", desc: "Two days of talks and workshops bringing together researchers, doctors and policy makers around prevention in public health. About 400 participants are expected.", note: "Auditorium and foyer closed to residents from 7:30am to 7pm. The café stays open via the side entrance.", pass: "Green “Maison internationale” bracelet, to collect at reception with your resident card." },
   "Séminaire de direction": { title: "Management seminar", desc: "Annual strategy seminar of a private company’s management team, with workshops and lunch on site.", note: "Common lounge booked privately. Use the rear entrance to reach the upper floors." },
-  "Salon de recrutement": { title: "Recruitment fair", desc: "Job fair for recent graduates: about thirty companies present their internships and job offers.", note: "Sports hall closed all day (set-up from 7am). Today’s sports classes are cancelled.", pass: "Orange “Centre sportif” bracelet to reach the changing rooms, to collect at the sports centre reception." },
-  "Réception de partenaires": { title: "Partners’ reception", desc: "Private reception held by an events agency for its clients and partners.", note: "Security check at the entrance hall: show your resident card.", pass: "Show your resident badge at the entrance; outside guests go through a security check." },
-  "Assemblée générale": { title: "General assembly", desc: "Annual general assembly of a network of European universities: review of the year and vote on projects.", note: "Grand salon unavailable. The study rooms on the first floor stay open." },
-  "Tournage d’un documentaire": { title: "Documentary shoot", desc: "Shooting of a documentary on the history of the Cité internationale, with interviews in the reading room.", note: "Half of the reading room is closed; please keep quiet during takes." },
-  "Village d’exposants": { title: "Exhibitors’ village", desc: "Open-air village of stands for a trade fair on sustainable cities.", note: "Main lawn fenced off; the footpath is diverted along boulevard Jourdan." },
-  "Session de formation professionnelle": { title: "Professional training session", desc: "Adult training course on project management, run by a private institute.", note: "Common lounge booked. The shared kitchen stays open." },
-  "Cocktail déjeunatoire": { title: "Lunch reception", desc: "Closing reception of a company seminar, served in the garden.", note: "Garden partly booked from 10am to 4pm." },
-  "Gala de remise de prix": { title: "Awards gala", desc: "A foundation’s gala evening: awards for research projects, followed by dinner.", note: "Auditorium and forecourt closed from 4pm to 11pm. Residents’ access via the north door.", pass: "Green “Maison internationale” bracelet required after 6pm to cross the hall." },
-  "Tournoi inter-entreprises": { title: "Corporate sports tournament", desc: "Friendly tournament between employees of several companies (five-a-side football and basketball).", note: "Outdoor courts closed to residents all day." },
-  "Journée d’étude": { title: "Study day", desc: "Academic study day on student migration in Europe, with round tables.", note: "Common lounge closed; possible noise in the hall during breaks." },
-  "Conseil d’administration": { title: "Board meeting", desc: "Quarterly board meeting of a private company.", note: "Part of the lounge is booked; please keep the noise down." },
-  "Petit-déjeuner professionnel": { title: "Business breakfast", desc: "Networking breakfast for entrepreneurs from the south of Paris.", note: "Café closed to residents until 11am." },
-  "Conférence annuelle": { title: "Annual conference", desc: "Annual conference of a training institute: talks, round tables and a reception.", note: "Common lounge and hall closed from 8am to 6:30pm.", pass: "Blue “Maison du Japon” bracelet to reach the upper floors, to collect at the house reception." },
-  "Cycle de conférences santé": { title: "Health lecture series", desc: "Weekly lecture series for health professionals, every Tuesday evening.", note: "Auditorium unavailable from 5pm to 8:30pm." },
-  "Tournage d’une publicité": { title: "Commercial shoot", desc: "Shooting of an advertisement in the house garden.", note: "Garden closed; technical vehicles parked in front of the house." },
-  "Salon des associations professionnelles": { title: "Professional associations fair", desc: "Fair bringing together professional associations from the education sector.", note: "Only half of the sports hall can be used." },
+  "Déjeuner de séminaire": { title: "Seminar lunch", desc: "Seated lunch for the 120 participants of a training seminar.", note: "Half of the dining hall is booked from 11:30am to 2:30pm; residents are still served, expect a longer wait." },
+  "Entraînement d’un club de natation": { title: "Swimming club training", desc: "Weekly training of an outside swimming club, on the same evening every week.", note: "Four of the six lanes are booked for the club; two lanes stay open to residents." },
+  "Tournage d’une vidéo de fitness": { title: "Fitness video shoot", desc: "Shooting of a promotional video for a sports equipment brand.", note: "Weights area closed until noon. The cardio room stays open.", pass: "Yellow “Salle de musculation” bracelet to reach the cardio room, to collect at reception." },
 };
 
 async function removeSamples() {
@@ -145,6 +123,17 @@ async function main() {
       const venue = existing ?? (await db.venue.create({ data: { houseId: house.id, nameFr: fr, nameEn: en, sortOrder: j + 1 } }));
       spaceIds[`${h.slug}/${fr}`] = venue.id;
     }
+  }
+  // Retired sites: drop their sample events, then the site itself if no real event uses it.
+  for (const slug of RETIRED_HOUSES) {
+    const house = await db.house.findUnique({ where: { slug }, select: { id: true } });
+    if (!house) continue;
+    await db.event.deleteMany({ where: { houseId: house.id, isSample: true } });
+    if ((await db.event.count({ where: { houseId: house.id } })) === 0) {
+      await db.event.deleteMany({ where: { isSample: true, venue: { houseId: house.id } } });
+      await db.house.delete({ where: { id: house.id } });
+      console.log(`Removed the retired site “${slug}”.`);
+    } else console.log(`Kept “${slug}”: real events still use it (remove it in the admin).`);
   }
   // --if-empty (used when the server starts on Render): reference data only, unless the
   // database has no events yet. SEED_SAMPLES=refresh forces a full re-seed of the samples.
@@ -219,7 +208,7 @@ async function main() {
   const inDays = (n: number, time: string) => parseLocalDateTime(addDaysToKey(today, n), time)!;
   const others = [
     { org: "alteris", status: "PENDING" as const, days: 5, start: "09:00", end: "17:00", cat: "workshops", house: "neerlandais", space: "Salon commun", impact: "CLOSED" as const, note: "Salon commun privatisé.", title: "Séminaire commercial", desc: "Séminaire d’entreprise." },
-    { org: "lumen", status: "PENDING" as const, days: 9, start: "07:00", end: "20:00", cat: "culture", house: "parc", space: "Pelouse centrale", impact: "LIMITED" as const, note: "Zone de tournage balisée.", title: "Tournage d’un long métrage", desc: "Tournage en extérieur." },
+    { org: "lumen", status: "PENDING" as const, days: 9, start: "07:00", end: "20:00", cat: "culture", house: "maroc", space: "Jardin", impact: "LIMITED" as const, note: "Zone de tournage balisée dans le jardin.", title: "Tournage d’un long métrage", desc: "Tournage en extérieur." },
     { org: "europa", status: "DRAFT" as const, days: 20, start: "09:00", end: "18:00", cat: "talks", house: "maison-internationale", space: "Auditorium", impact: "CLOSED" as const, note: "", title: "Congrès annuel", desc: "" },
     { org: "nova", status: "REJECTED" as const, days: 7, start: "20:00", end: "02:00", cat: "community", house: "japon", space: "Jardin", impact: "CLOSED" as const, note: "", title: "Soirée privée", desc: "Soirée privée avec DJ.", reason: "Les soirées privées en extérieur ne sont pas autorisées dans les maisons." },
   ];

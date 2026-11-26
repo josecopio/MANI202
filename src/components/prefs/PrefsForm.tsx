@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 const focusRing =
   "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent";
 
-/** Chooses the resident's house and the other houses they use. */
+/** Chooses the resident's house, the other houses they use and the facilities they use. */
 export function PrefsForm({ houses, initial, onSaved }: { houses: HouseView[]; initial: Prefs; onSaved?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
@@ -23,6 +23,17 @@ export function PrefsForm({ houses, initial, onSaved }: { houses: HouseView[]; i
 
   const residences = houses.filter((h) => h.isResidence);
   const toggle = (slug: string) => setOthers((list) => (list.includes(slug) ? list.filter((s) => s !== slug) : [...list, slug]));
+
+  const pill = (h: HouseView) => {
+    const on = others.includes(h.slug);
+    return (
+      <label key={h.slug} className={cn("pill", focusRing, on && "!border-brand !bg-brand !text-ink")}>
+        <input type="checkbox" className="sr-only" checked={on} onChange={() => toggle(h.slug)} />
+        {on ? <Check size={16} aria-hidden="true" /> : <span aria-hidden="true" className="size-2.5 rounded-full" style={{ backgroundColor: h.color }} />}
+        {h.name}
+      </label>
+    );
+  };
 
   const save = () => {
     setError(false);
@@ -79,24 +90,13 @@ export function PrefsForm({ houses, initial, onSaved }: { houses: HouseView[]; i
 
       <fieldset>
         <legend className="font-heading text-lg font-semibold">{t.prefs.othersTitle}</legend>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {houses
-            .filter((h) => h.slug !== home)
-            .map((h) => {
-              const on = others.includes(h.slug);
-              return (
-                <label key={h.slug} className={cn("pill", focusRing, on && "!border-brand !bg-brand !text-ink")}>
-                  <input type="checkbox" className="sr-only" checked={on} onChange={() => toggle(h.slug)} />
-                  {on ? (
-                    <Check size={16} aria-hidden="true" />
-                  ) : (
-                    <span aria-hidden="true" className="size-2.5 rounded-full" style={{ backgroundColor: h.color }} />
-                  )}
-                  {h.name}
-                </label>
-              );
-            })}
-        </div>
+        <div className="mt-3 flex flex-wrap gap-2">{houses.filter((h) => !h.isFacility && h.slug !== home).map(pill)}</div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="font-heading text-lg font-semibold">{t.prefs.facilitiesTitle}</legend>
+        <p className="mt-1 text-sm text-muted">{t.prefs.facilitiesHint}</p>
+        <div className="mt-3 flex flex-wrap gap-2">{houses.filter((h) => h.isFacility).map(pill)}</div>
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-3">

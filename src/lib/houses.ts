@@ -12,7 +12,13 @@ export type HouseView = {
   isResidence: boolean;
   sortOrder: number;
   color: string;
+  /** Library, restaurant, pool, gym…: chosen in their own section, apart from the houses. */
+  isFacility: boolean;
 };
+
+/** Shared facilities (not houses) — listed in their own section of the preferences. */
+export const FACILITY_SLUGS = ["bibliotheque", "restaurant-crous", "piscine", "salle-de-musculation"];
+export const isFacility = (slug: string) => FACILITY_SLUGS.includes(slug);
 
 export type SpaceView = { id: string; houseId: string | null; name: string; isOther: boolean };
 
@@ -29,7 +35,7 @@ export function houseColor(index: number): string {
 
 export async function getHouses(locale: Locale): Promise<HouseView[]> {
   const rows = await db.house.findMany({ orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }] });
-  return rows.map((h, i) => ({ ...h, name: locale === "fr" ? h.nameFr : h.nameEn, color: houseColor(i) }));
+  return rows.map((h, i) => ({ ...h, name: locale === "fr" ? h.nameFr : h.nameEn, color: houseColor(i), isFacility: isFacility(h.slug) }));
 }
 
 export async function getHouseBySlug(slug: string, locale: Locale) {
@@ -39,7 +45,7 @@ export async function getHouseBySlug(slug: string, locale: Locale) {
   const all = await db.house.findMany({ orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }], select: { slug: true } });
   const { venues: _venues, ...house } = h;
   return {
-    house: { ...house, name: locale === "fr" ? h.nameFr : h.nameEn, color: houseColor(all.findIndex((x) => x.slug === slug)) } as HouseView,
+    house: { ...house, name: locale === "fr" ? h.nameFr : h.nameEn, color: houseColor(all.findIndex((x) => x.slug === slug)), isFacility: isFacility(slug) } as HouseView,
     spaces: h.venues.map((v) => ({ id: v.id, houseId: v.houseId, isOther: v.isOther, name: locale === "fr" ? v.nameFr : v.nameEn })),
   };
 }
