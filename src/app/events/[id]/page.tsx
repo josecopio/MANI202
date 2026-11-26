@@ -149,12 +149,12 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
             </p>
             {text.restrictionNote && <p className="mt-2 text-[17px] leading-relaxed">{text.restrictionNote}</p>}
             {text.accessPass && (
-              <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-brand bg-surface p-4">
-                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent" aria-hidden="true">
+              <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-danger bg-danger-soft p-4">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-danger text-white" aria-hidden="true">
                   <Ticket size={20} />
                 </span>
                 <div>
-                  <p className="font-semibold">{t.access.passRequired}</p>
+                  <p className="font-semibold text-danger">{t.access.passRequired}</p>
                   <p className="mt-0.5 leading-relaxed">{text.accessPass}</p>
                 </div>
               </div>
