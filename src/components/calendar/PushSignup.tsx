@@ -27,7 +27,7 @@ async function register(subscription: PushSubscription, welcome: boolean) {
  * Turns on push notifications for this device. The subscription follows the houses chosen
  * on the calendar and the interface language (when either changes, the server copy is refreshed).
  */
-export function PushSignup({ publicKey, housesKey }: { publicKey: string | null; housesKey: string }) {
+export function PushSignup({ publicKey, housesKey, demo = false }: { publicKey: string | null; housesKey: string; /** Video demo: show as turned on. */ demo?: boolean }) {
   const { locale, t } = useI18n();
   const [status, setStatus] = useState<Status>("loading");
 
@@ -41,6 +41,7 @@ export function PushSignup({ publicKey, housesKey }: { publicKey: string | null;
 
   // Initial state, and keep the server copy in sync with the houses chosen on this device.
   useEffect(() => {
+    if (demo) return setStatus("on");
     if (!supported()) return setStatus("unsupported");
     if (!publicKey) return setStatus("unavailable");
     if (Notification.permission === "denied") return setStatus("denied");
@@ -58,7 +59,7 @@ export function PushSignup({ publicKey, housesKey }: { publicKey: string | null;
       cancelled = true;
     };
     // Re-run when the houses or the language change, so notifications follow both.
-  }, [publicKey, housesKey, locale, currentSubscription]);
+  }, [publicKey, housesKey, locale, currentSubscription, demo]);
 
   const enable = async () => {
     if (!publicKey) return;

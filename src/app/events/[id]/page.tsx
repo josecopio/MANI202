@@ -13,6 +13,9 @@ import { expandOccurrences } from "@/lib/recurrence";
 import { eventUrl, getBaseUrl } from "@/lib/site";
 import { cn, fmt } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { EntranceMap } from "@/components/event/EntranceMap";
+import { resolvePlan } from "@/lib/access-map-mock";
+import { isVideoDemo } from "@/lib/video-demo";
 
 const load = cache(async (id: string) => getEventWithRelations(id));
 
@@ -62,6 +65,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const published = event.status === "PUBLISHED";
   const closed = event.spaceImpact === "CLOSED";
   const text = eventTexts(event, locale);
+  const demo = await isVideoDemo();
+  // MOCK (demo video): entrance map of the house, only in video demo mode.
+  const plan = demo ? resolvePlan({ houseSlug: event.house?.slug ?? null, spaceFr: event.venue.nameFr, spaceImpact: event.spaceImpact }) : null;
 
   // For a series, show the next upcoming occurrence rather than the very first date.
   const now = new Date();
@@ -108,7 +114,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
           <p className="font-medium">{t.detail.notPublished}</p>
         </div>
       )}
-      {event.isSample && <p className="mt-2 rounded-control bg-neutral-soft p-3 text-sm font-medium text-muted">{t.detail.sampleNotice}</p>}
+      {event.isSample && !demo && <p className="mt-2 rounded-control bg-neutral-soft p-3 text-sm font-medium text-muted">{t.detail.sampleNotice}</p>}
 
       <div className="mt-4 overflow-hidden rounded-[32px] md:bg-surface">
         {event.imageUrl && (
@@ -158,6 +164,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
                   <p className="mt-0.5 leading-relaxed">{text.accessPass}</p>
                 </div>
               </div>
+            )}
+            {plan && event.house && (
+              <EntranceMap resolved={plan} houseName={locale === "fr" ? event.house.nameFr : event.house.nameEn} locale={locale} t={t} />
             )}
           </section>
 

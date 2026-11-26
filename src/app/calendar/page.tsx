@@ -13,6 +13,7 @@ import { EditPanel } from "@/components/calendar/EditPanel";
 import { CalendarConnect } from "@/components/calendar/CalendarConnect";
 import { PushSignup } from "@/components/calendar/PushSignup";
 import { vapidPublicKey } from "@/lib/push";
+import { isVideoDemo } from "@/lib/video-demo";
 
 const DAYS = 7;
 
@@ -43,6 +44,17 @@ export default async function CalendarPage() {
   const noon = (key: string) => new Date(`${key}T12:00:00Z`);
   const dayName = (key: string, i: number) =>
     i === 0 ? t.access.today : i === 1 ? t.access.tomorrow : weekday.format(noon(key)).replace(/\.$/, "");
+
+  const demo = await isVideoDemo();
+  const preview = items.slice(0, 3).map((e) => {
+    const i = days.indexOf(e.dayKey);
+    return {
+      day: dayName(e.dayKey, i),
+      time: `${formatTime(e.startAt, locale)}–${formatTime(e.endAt, locale)}`,
+      label: [e.spaceImpact === "CLOSED" ? t.access.closed : t.access.limited, e.space, e.houseName].filter(Boolean).join(" · "),
+      closed: e.spaceImpact === "CLOSED",
+    };
+  });
 
   const count = items.length;
   const countLabel = count === 0 ? t.access.count_zero : fmt(count === 1 ? t.access.count_one : t.access.count_other, { count });
@@ -124,8 +136,8 @@ export default async function CalendarPage() {
         })}
       </ol>
       <div className="mt-8 grid gap-4 @4xl:grid-cols-2">
-        <PushSignup publicKey={vapidPublicKey()} housesKey={followed.join(",")} />
-        <CalendarConnect initialBaseUrl={getBaseUrl()} feedQuery={feed.toString().replace(/%2C/g, ",")} />
+        <PushSignup publicKey={vapidPublicKey()} housesKey={followed.join(",")} demo={demo} />
+        <CalendarConnect initialBaseUrl={getBaseUrl()} feedQuery={feed.toString().replace(/%2C/g, ",")} demo={demo} preview={preview} />
       </div>
     </div>
   );
