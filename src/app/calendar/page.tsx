@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CircleCheck, DoorClosed, Home, ShieldCheck, Ticket, TriangleAlert } from "lucide-react";
+import { ArrowRight, CircleCheck, DoorClosed, Home, ShieldCheck, Ticket, TriangleAlert } from "lucide-react";
 import { getI18n } from "@/lib/i18n/server";
 import { getPrefs } from "@/lib/prefs";
 import { followedHouses } from "@/lib/prefs-shared";
@@ -49,8 +49,9 @@ export default async function CalendarPage() {
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      {/* Value statement */}
-      <section className="relative overflow-hidden rounded-[28px] panel p-5 sm:p-8 md:rounded-[32px]">
+      <h1 className="sr-only md:hidden">{t.access.eyebrow}</h1>
+      {/* Value statement (desktop only) */}
+      <section className="relative hidden overflow-hidden rounded-[32px] panel p-8 md:block">
         <div className="absolute inset-y-0 right-0 hidden w-40 bg-brand @3xl:block" style={{ clipPath: "polygon(35% 0, 100% 0, 100% 100%, 0 100%)" }} aria-hidden="true" />
         <ShieldCheck className="absolute right-10 top-1/2 hidden size-16 -translate-y-1/2 text-white @3xl:block" strokeWidth={1.5} aria-hidden="true" />
         <div className="relative @3xl:pr-44">
@@ -61,7 +62,7 @@ export default async function CalendarPage() {
       </section>
 
       {/* What is shown + edit */}
-      <div className="mt-6 flex flex-wrap items-center gap-3 md:mt-8">
+      <div className="flex flex-wrap items-center gap-3 md:mt-8">
         <div className="min-w-0 flex-1">
           <h2 className="text-xl font-semibold sm:text-2xl">{t.access.weekLabel}</h2>
           <p className="mt-1 text-muted">{countLabel}</p>
@@ -155,12 +156,15 @@ export default async function CalendarPage() {
           )}
           <span className="block text-sm leading-snug text-muted">{e.space}</span>
           {e.accessPass && (
-            <span className="mt-1.5 inline-flex items-center gap-1 whitespace-nowrap rounded-pill bg-surface px-2 py-0.5 text-xs font-semibold text-ink">
+            <span className="mt-1.5 inline-flex items-center gap-1 whitespace-nowrap rounded-pill bg-danger px-2 py-0.5 text-xs font-semibold text-white">
               <Ticket size={12} aria-hidden="true" />
               {t.access.passRequired}
             </span>
           )}
-          <span className="mt-1.5 block text-xs leading-snug text-muted">{fmt(t.access.bookedBy, { org: e.organiserName })}</span>
+          <span className="mt-1.5 flex items-end justify-between gap-2">
+            <span className="text-xs leading-snug text-muted">{fmt(t.access.bookedBy, { org: e.organiserName })}</span>
+            <ArrowRight size={16} className={cn("shrink-0", closed ? "text-danger" : "text-warn")} aria-hidden="true" />
+          </span>
         </Link>
       </li>
     );

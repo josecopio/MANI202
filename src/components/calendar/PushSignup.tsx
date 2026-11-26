@@ -108,14 +108,13 @@ export function PushSignup({ publicKey, housesKey }: { publicKey: string | null;
 
   return (
     <section aria-labelledby="push-title" className="flex flex-col gap-5 rounded-[32px] panel p-6 sm:p-8">
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-4">
         <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent" aria-hidden="true">
           <BellRing size={24} />
         </span>
         <div>
           <h2 id="push-title" className="text-xl font-semibold">{t.access.pushTitle}</h2>
-          <p className="mt-1 text-muted">{t.access.pushHelp}</p>
-        </div>
+                  </div>
       </div>
       <div className="mt-auto flex flex-wrap items-center gap-3">
         {status === "on" ? (

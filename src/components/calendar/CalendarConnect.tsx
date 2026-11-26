@@ -39,14 +39,13 @@ export function CalendarConnect({ initialBaseUrl, feedQuery }: { initialBaseUrl:
 
   return (
     <section aria-labelledby="connect-title" className="flex flex-col gap-5 rounded-[32px] panel p-6 sm:p-8">
-      <div className="flex min-w-0 flex-1 items-start gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
         <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent" aria-hidden="true">
           <CalendarSync size={24} />
         </span>
         <div>
           <h2 id="connect-title" className="text-xl font-semibold">{t.access.connectTitle}</h2>
-          <p className="mt-1 text-muted">{t.access.connectHelp}</p>
-        </div>
+                  </div>
       </div>
       <div className="mt-auto flex flex-wrap gap-2">
         {links.map((l) => (
